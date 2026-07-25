@@ -1,0 +1,16 @@
+import { revalidatePath } from "next/cache";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  const { secret } = await request.json();
+  const expected = process.env.REVALIDATE_SECRET;
+  if (!expected || secret !== expected) {
+    return NextResponse.json({ message: "Invalid secret" }, { status: 401 });
+  }
+  revalidatePath("/", "layout");
+  revalidatePath("/archives", "layout");
+  revalidatePath("/about", "layout");
+  revalidatePath("/equipment", "layout");
+  revalidatePath("/labs", "layout");
+  return NextResponse.json({ revalidated: true, now: Date.now() });
+}

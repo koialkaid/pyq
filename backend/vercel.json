@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
+  ],
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  },
+  "crons": [
+    { "path": "/api/douban/cron-sync", "schedule": "17 3 * * *" }
+  ]
+}

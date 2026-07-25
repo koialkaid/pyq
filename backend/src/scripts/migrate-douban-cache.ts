@@ -1,0 +1,47 @@
+import dotenv from "dotenv";
+import sequelize from "../config/database";
+
+dotenv.config();
+
+const columns = [
+  "ADD COLUMN douban_cache MEDIUMTEXT NULL",
+  "ADD COLUMN douban_sync_status VARCHAR(20) NOT NULL DEFAULT 'never'",
+  "ADD COLUMN douban_synced_at DATETIME NULL",
+  "ADD COLUMN douban_last_error TEXT NULL",
+  "ADD COLUMN douban_sync_lease_id VARCHAR(64) NULL",
+  "ADD COLUMN douban_sync_lease_expires_at DATETIME NULL",
+  "ADD COLUMN douban_last_attempt_at DATETIME NULL",
+];
+
+/** Adds only the SiteSetting columns required by the Douban snapshot feature. */
+export async function migrateDoubanCache() {
+  for (const definition of columns) {
+    try {
+      await sequelize.query(`ALTER TABLE site_settings ${definition}`);
+      console.log(`Applied: ${definition}`);
+    } catch (error: any) {
+      const message = String(error?.message || error);
+      if (/duplicate column|already exists/i.test(message)) {
+        console.log(`Already present: ${definition}`);
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
+async function main() {
+  try {
+    await sequelize.authenticate();
+    await migrateDoubanCache();
+  } catch (error) {
+    console.error("Douban cache migration failed:", error);
+    process.exitCode = 1;
+  } finally {
+    await sequelize.close().catch(() => {});
+  }
+}
+
+if (require.main === module) {
+  void main();
+}
