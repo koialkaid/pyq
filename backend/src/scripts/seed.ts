@@ -26,7 +26,7 @@ async function seed() {
         email: adminEmail,
         username: adminUsername,
         password: await bcrypt.hash(adminPassword, 10),
-        nickname: "小予",
+        nickname: "koi",
         // avatar 留空，前端 resolveAvatar() 会自动用 Cravatar 根据邮箱生成
         avatar: "",
         cover: "https://picsum.photos/seed/momentscover/1200/600",
@@ -39,7 +39,7 @@ async function seed() {
     if (!created) {
       await admin.update({
         username: admin.username || adminUsername,
-        nickname: admin.nickname === "锦的朋友圈" ? "小予" : admin.nickname,
+        nickname: admin.nickname === "锦的朋友圈" ? "koi" : admin.nickname,
       });
     }
 

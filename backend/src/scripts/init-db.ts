@@ -68,7 +68,7 @@ async function ensureAdmin() {
     email,
     username,
     password: await bcrypt.hash(password, 10),
-    nickname: "小予",
+    nickname: "koi",
     avatar: "",
     cover: "https://picsum.photos/seed/momentscover/1200/600",
     bio: "这是一个朋友圈博客程序",

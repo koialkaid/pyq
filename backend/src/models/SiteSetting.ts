@@ -354,7 +354,7 @@ SiteSetting.init(
 );
 
 export const DEFAULT_FOOTER_HTML =
-  `© ${new Date().getFullYear()} <a href="https://kanle.net" target="_blank" rel="noopener noreferrer">kanle</a> by 小予 · 程序由AI生成`;
+  `© ${new Date().getFullYear()} koi · 程序由AI生成`;
 
 export const siteSettingTextDefaults = {
   backgroundImages: "[]",

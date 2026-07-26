@@ -153,7 +153,7 @@ function cravatar(nickname: string): string {
 
 export const owner: User = {
   id: "u1",
-  nickname: "小予",
+  nickname: "koi",
   avatar: "/avatar-owner.svg",
   cover: "https://picsum.photos/seed/momentscover/1200/600",
   bio: "这是一个朋友圈博客程序",
