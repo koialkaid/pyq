@@ -14,11 +14,14 @@ import multer from "multer";
 import { authenticate, requireAdmin, AuthRequest } from "../middleware/auth";
 import { Media } from "../models";
 import {
-  storeFileAndRecordMedia,
   createPresignedUpload,
-  isR2Ready,
+  deleteStoredKey,
+  downloadStoredObject,
+  getStorageProvider,
+  getStoragePublicUrl,
+  isStorageReady,
+  storeFileAndRecordMedia,
 } from "../services/storage-service";
-import { downloadFromR2, deleteFromR2 } from "../services/r2-service";
 import { extractMotionPhoto } from "../services/motion-photo";
 
 const router = Router();
@@ -219,17 +222,16 @@ router.post("/confirm", authenticate, requireAdmin, async (req: AuthRequest, res
     res.status(400).json({ message: "缺少 key 参数" });
     return;
   }
-  if (!isR2Ready()) {
-    res.status(400).json({ message: "R2 存储未配置" });
+  if (!isStorageReady()) {
+    res.status(400).json({ message: "云端存储未配置" });
     return;
   }
   try {
-    const { R2_PUBLIC_URL } = process.env as Record<string, string>;
-    const url = `${(R2_PUBLIC_URL || "").replace(/\/+$/, "")}/${key}`;
+    const url = getStoragePublicUrl(key);
     const media = await Media.create({
       filename: filename || key,
       url,
-      storageType: "r2",
+      storageType: getStorageProvider(),
       mimeType: mimeType || "application/octet-stream",
       size: Number(size) || 0,
       uploaderId: req.user!.id,
@@ -248,12 +250,12 @@ router.post("/motion-photo/confirm", authenticate, requireAdmin, async (req: Aut
     res.status(400).json({ message: "缺少 key 参数" });
     return;
   }
-  if (!isR2Ready()) {
-    res.status(400).json({ message: "R2 存储未配置" });
+  if (!isStorageReady()) {
+    res.status(400).json({ message: "云端存储未配置" });
     return;
   }
   try {
-    const buffer = await downloadFromR2(key);
+    const buffer = await downloadStoredObject(key);
     const extracted = extractMotionPhoto(buffer);
     const baseName = path.basename(filename || key, path.extname(filename || key));
 
@@ -263,16 +265,15 @@ router.post("/motion-photo/confirm", authenticate, requireAdmin, async (req: Aut
         storeFileAndRecordMedia(extracted.video, `${baseName}.mp4`, extracted.videoMime, req.user!.id),
       ]);
       // 原始合并文件不再需要，清理掉避免占用存储空间
-      deleteFromR2(key).catch(() => {});
+      deleteStoredKey(key).catch(() => {});
       res.json({ image: imageResult.url, video: videoResult.url, isLivePhoto: true });
     } else {
       // 非动态照片：直接把已上传的原文件登记为普通图片
-      const { R2_PUBLIC_URL } = process.env as Record<string, string>;
-      const url = `${(R2_PUBLIC_URL || "").replace(/\/+$/, "")}/${key}`;
+      const url = getStoragePublicUrl(key);
       const media = await Media.create({
         filename: filename || key,
         url,
-        storageType: "r2",
+        storageType: getStorageProvider(),
         mimeType: "image/jpeg",
         size: buffer.length,
         uploaderId: req.user!.id,

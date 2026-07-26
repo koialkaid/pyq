@@ -96,7 +96,7 @@ export default function GlobalMusicManager() {
       const prepared = useMusicPlayer.getState().prepareTrack(index);
       if (!prepared) return false;
       audio.src = prepared.url;
-      if (shouldPlay) audio.play().catch(() => useMusicPlayer.getState().setAudioError(true, "R2 音频文件无法播放，请稍后重试。"));
+      if (shouldPlay) audio.play().catch(() => useMusicPlayer.getState().setAudioError(true, "云端音频文件无法播放，请稍后重试。"));
       else audio.load();
       return true;
     };
@@ -114,7 +114,7 @@ export default function GlobalMusicManager() {
       state.setSwitching(false);
       state.setLoading(false);
       state.setPlaying(false);
-      state.setAudioError(true, "R2 音频文件无法播放，请确认文件未被删除。");
+      state.setAudioError(true, "云端音频文件无法播放，请确认文件未被删除。");
     };
     const onWaiting = () => useMusicPlayer.getState().setLoading(true);
     const onPlaying = () => useMusicPlayer.getState().setLoading(false);

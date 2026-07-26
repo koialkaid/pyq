@@ -48,7 +48,7 @@ async function loadDefaultPlaylist() {
 
 async function getOwnedMedia(id: unknown, userId: string, category: "audio" | "image") {
   if (typeof id !== "string") return null;
-  const media = await Media.findOne({ where: { id, uploaderId: userId, storageType: "r2" } });
+  const media = await Media.findOne({ where: { id, uploaderId: userId } });
   if (!media || !media.mimeType.startsWith(`${category}/`)) return null;
   return media;
 }
@@ -62,7 +62,7 @@ function readText(value: unknown, field: string, maxLength: number, required = f
   return text;
 }
 
-// GET /api/music — public R2-only background playlist.
+// GET /api/music — public cloud-only background playlist.
 router.get("/", async (_req: Request, res: Response) => {
   try {
     const { playlist, tracks } = await loadDefaultPlaylist();
@@ -122,13 +122,13 @@ router.post("/admin/tracks", authenticate, requireAdmin, async (req: AuthRequest
   try {
     const audio = await getOwnedMedia(req.body?.audioMediaId, req.user!.id, "audio");
     if (!audio) {
-      res.status(400).json({ message: "请选择本人上传的 R2 音频文件" });
+      res.status(400).json({ message: "请选择本人上传的 云端音频文件" });
       return;
     }
     const coverMediaId = req.body?.coverMediaId;
     const cover = coverMediaId == null || coverMediaId === "" ? null : await getOwnedMedia(coverMediaId, req.user!.id, "image");
     if (coverMediaId && !cover) {
-      res.status(400).json({ message: "封面必须是本人上传的 R2 图片" });
+      res.status(400).json({ message: "封面必须是本人上传的 云端图片" });
       return;
     }
     const title = readText(req.body?.title, "歌曲名称", 255, false) || audio.filename.replace(/\.[^.]+$/, "") || "未命名歌曲";
@@ -167,7 +167,7 @@ router.patch("/admin/tracks/:id", authenticate, requireAdmin, async (req: AuthRe
     if (req.body?.audioMediaId !== undefined) {
       const audio = await getOwnedMedia(req.body.audioMediaId, req.user!.id, "audio");
       if (!audio) {
-        res.status(400).json({ message: "请选择本人上传的 R2 音频文件" });
+        res.status(400).json({ message: "请选择本人上传的 云端音频文件" });
         return;
       }
       updates.audioMediaId = audio.id;
@@ -177,7 +177,7 @@ router.patch("/admin/tracks/:id", authenticate, requireAdmin, async (req: AuthRe
       else {
         const cover = await getOwnedMedia(req.body.coverMediaId, req.user!.id, "image");
         if (!cover) {
-          res.status(400).json({ message: "封面必须是本人上传的 R2 图片" });
+          res.status(400).json({ message: "封面必须是本人上传的 云端图片" });
           return;
         }
         updates.coverMediaId = cover.id;

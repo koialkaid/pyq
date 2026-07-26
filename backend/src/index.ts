@@ -11,7 +11,7 @@
 import app from "./app";
 import { ensureReady } from "./bootstrap";
 
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT || 4000);
 
 async function main() {
   try {

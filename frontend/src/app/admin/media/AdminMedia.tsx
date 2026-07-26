@@ -24,7 +24,7 @@ interface MediaItem {
   id: string;
   filename: string;
   url: string;
-  storageType: "r2";
+  storageType: "r2" | "supabase";
   mimeType: string;
   size: number;
   category: "image" | "video" | "audio" | "file";

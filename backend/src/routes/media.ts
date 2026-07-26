@@ -9,14 +9,17 @@ import { Op } from "sequelize";
 import { param, validationResult } from "express-validator";
 import { CatalogItem, Media, MusicTrack, Post, UploadIntent, User, getMediaCategory } from "../models";
 import { authenticate, requireAdmin, AuthRequest } from "../middleware/auth";
-import { deleteStoredFile, isR2Ready } from "../services/storage-service";
 import {
   buildObjectKey,
   buildStagingKey,
   createPresignedUploadForKey,
-  promoteR2Object,
-  statR2Object,
-} from "../services/r2-service";
+  deleteStoredFile,
+  getStorageProvider,
+  getStorageUploadLimit,
+  isStorageReady,
+  promoteStoredObject,
+  statStoredObject,
+} from "../services/storage-service";
 
 const router = Router();
 
@@ -152,19 +155,20 @@ router.get(
 // body: { filename: string, mimeType: string, kind: "image"|"video"|"audio"|"file" }
 router.post("/presign", authenticate, requireAdmin, async (req: AuthRequest, res: Response) => {
   const { filename, mimeType, kind } = req.body || {};
-  if (!isR2Ready()) {
-    res.status(400).json({ message: "R2 存储未配置" });
+  if (!isStorageReady()) {
+    res.status(400).json({ message: "云端存储未配置" });
     return;
   }
 
   try {
     const { kind: approvedKind, rule } = getDirectUploadRule(kind, filename, mimeType);
+    const maxSize = Math.min(rule.maxSize, getStorageUploadLimit());
     const intent = await UploadIntent.create({
       uploaderId: req.user!.id,
       kind: approvedKind,
       filename: path.basename(filename),
       mimeType,
-      maxSize: rule.maxSize,
+      maxSize,
       stagingKey: "pending",
       finalKey: "pending",
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
@@ -173,7 +177,7 @@ router.post("/presign", authenticate, requireAdmin, async (req: AuthRequest, res
     const finalKey = buildObjectKey("media", intent.filename);
     await intent.update({ stagingKey, finalKey });
     const { uploadUrl } = await createPresignedUploadForKey(stagingKey, intent.mimeType);
-    res.json({ intentId: intent.id, uploadUrl, expiresIn: 600, maxSize: rule.maxSize });
+    res.json({ intentId: intent.id, uploadUrl, expiresIn: 600, maxSize });
   } catch (err: any) {
     res.status(400).json({ message: err.message || "获取直传地址失败" });
   }
@@ -204,21 +208,23 @@ router.post("/confirm", authenticate, requireAdmin, async (req: AuthRequest, res
       return;
     }
 
-    const object = await statR2Object(intent.stagingKey);
+    const object = await statStoredObject(intent.stagingKey);
     if (!object || object.size <= 0) {
       res.status(400).json({ message: "未找到已上传的文件，请重新上传" });
       return;
     }
-    if (object.size > Number(intent.maxSize) || object.contentType !== intent.mimeType) {
+    const actualContentType = object.contentType?.split(";", 1)[0];
+    if (object.size > Number(intent.maxSize) || actualContentType !== intent.mimeType) {
       res.status(400).json({ message: "上传文件与已批准的类型或大小不匹配" });
       return;
     }
 
-    const url = await promoteR2Object(intent.stagingKey, intent.finalKey, intent.mimeType);
+    const storageType = getStorageProvider();
+    const url = await promoteStoredObject(intent.stagingKey, intent.finalKey, intent.mimeType);
     const media = await Media.create({
       filename: intent.filename,
       url,
-      storageType: "r2",
+      storageType,
       mimeType: intent.mimeType,
       size: object.size,
       uploaderId: intent.uploaderId,
@@ -312,7 +318,7 @@ router.delete(
 
     // 删除 R2 对象失败不阻塞记录删除
     try {
-      await deleteStoredFile(media.url, "r2");
+      await deleteStoredFile(media.url, media.storageType);
     } catch {
       console.log(`[media] 远端文件删除失败: ${media.url}`);
     }

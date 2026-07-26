@@ -131,14 +131,14 @@ async function validateR2MusicPayload(value: unknown, userId: string) {
   if (!music) return null;
   const url = music.url;
   if (typeof url !== "string") throw new Error("音乐地址格式无效");
-  const audio = await Media.findOne({ where: { url, uploaderId: userId, storageType: "r2" } });
+  const audio = await Media.findOne({ where: { url, uploaderId: userId } });
   if (!audio || !audio.mimeType.startsWith("audio/")) {
-    throw new Error("音乐必须引用本人上传的 R2 音频文件");
+    throw new Error("音乐必须引用本人上传的 云端音频文件");
   }
   if (music.cover) {
     if (typeof music.cover !== "string") throw new Error("音乐封面格式无效");
-    const cover = await Media.findOne({ where: { url: music.cover, uploaderId: userId, storageType: "r2" } });
-    if (!cover || !cover.mimeType.startsWith("image/")) throw new Error("音乐封面必须引用本人上传的 R2 图片");
+    const cover = await Media.findOne({ where: { url: music.cover, uploaderId: userId } });
+    if (!cover || !cover.mimeType.startsWith("image/")) throw new Error("音乐封面必须引用本人上传的 云端图片");
   }
   const name = typeof music.name === "string" ? music.name.trim().slice(0, 255) : "";
   const artist = typeof music.artist === "string" ? music.artist.trim().slice(0, 255) : "";
@@ -151,7 +151,7 @@ function formatPost(
   meLiked = false,
   commentLikesMap?: Map<string, { likeCount: number; meLiked: boolean }>
 ) {
-  // 静态 R2 音频直接返回，无需解析外部音源。
+  // 静态 云端音频直接返回，无需解析外部音源。
   const music = post.music || null;
   let linkCard = post.linkCard;
   if (typeof linkCard === "string") {

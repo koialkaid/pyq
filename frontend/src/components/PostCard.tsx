@@ -217,7 +217,7 @@ export default function PostCard({ post, index, onDelete }: PostCardProps) {
 
     try {
       const playUrl = getStaticMusicUrl(post.music);
-      if (!playUrl) throw new Error("该动态没有可播放的 R2 音频文件。");
+      if (!playUrl) throw new Error("该动态没有可播放的 云端音频文件。");
       setActiveMusic(post.id, {
         postId: post.id,
         url: playUrl,

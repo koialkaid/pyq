@@ -14,7 +14,8 @@
     "db:migrate-footer-html": "ts-node src/scripts/migrate-footer-html.ts",
     "db:migrate-decoration-image": "ts-node src/scripts/migrate-decoration-image.ts",
     "db:migrate-content-pages": "ts-node src/scripts/migrate-content-pages.ts",
-    "music:migrate-r2": "ts-node src/scripts/migrate-r2-music.ts"
+    "music:migrate-r2": "ts-node src/scripts/migrate-r2-music.ts",
+    "storage:smoke": "ts-node src/scripts/smoke-storage.ts"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +24,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1085.0",
     "@aws-sdk/s3-request-presigner": "^3.1085.0",
+    "@supabase/supabase-js": "^2.0.0",
     "@types/cookie-parser": "^1.4.10",
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
@@ -50,8 +52,10 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^26.0.1",
     "@types/nodemailer": "^8.0.1",
+    "@types/supertest": "^7.2.1",
     "@types/uuid": "^10.0.0",
     "nodemon": "^3.1.14",
+    "supertest": "^7.2.2",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   }

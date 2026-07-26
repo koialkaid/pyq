@@ -1,7 +1,7 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import sequelize from "../config/database";
 
-export type StorageType = "r2";
+export type StorageType = "r2" | "supabase";
 
 export type MediaCategory = "image" | "video" | "audio" | "file";
 

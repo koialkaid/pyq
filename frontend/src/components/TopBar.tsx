@@ -1042,7 +1042,7 @@ export function PublishModal({
     cover: string;
     url: string;
     source: "upload";
-    /** LRC 歌词文本（R2 上传音乐） */
+    /** LRC 歌词文本（云端上传音乐） */
     lrc?: string;
   } | null>(editPost?.music ?? null);
   const [linkCard, setLinkCard] = useState<{
@@ -1067,7 +1067,7 @@ export function PublishModal({
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [mediaRendered, setMediaRendered] = useState(false);
   const mediaSentinelRef = useRef<HTMLDivElement>(null);
-  // R2 音频仅支持上传或从媒体库选择。
+  // 云端音频仅支持上传或从媒体库选择。
   const [uploadingAudio, setUploadingAudio] = useState(false);
   // 编辑模式：从 editPost.music 回填元数据，避免用户看到空白表单
   const [customMusicName, setCustomMusicName] = useState(editPost?.music?.name ?? "");
@@ -1116,7 +1116,7 @@ export function PublishModal({
     return response.json() as Promise<{ image: string; video: string; isLivePhoto: boolean }>;
   };
 
-  // 浏览器本地拆分 JPEG 内嵌 MP4 后分别直传 R2，避免 Vercel 函数处理大文件。
+  // 浏览器本地拆分 JPEG 内嵌 MP4 后分别直传云端对象存储，避免 Vercel 函数处理大文件。
   const uploadMotionPhoto = async (
     file: File
   ): Promise<{ image: string; video: string | null; isLivePhoto: boolean } | null> => {
@@ -1185,7 +1185,7 @@ export function PublishModal({
       for (const [, g] of groups) {
         if (images.length + newImages.length >= 9) break;
         if (g.image && g.video) {
-          // 实况图：图片和视频先直传 R2，再由后端建立媒体库配对。
+          // 实况图：图片和视频先直传云端对象存储，再由后端建立媒体库配对。
           try {
             const pair = await createLivePhotoPair(g.image, g.video);
             newImages.push({ src: pair.image, video: pair.video });
@@ -1315,7 +1315,7 @@ export function PublishModal({
   const handleConfirmUploadMusic = () => {
     const url = uploadedAudioUrl;
     if (!url) {
-      setError("请上传 R2 音频文件");
+      setError("请上传 云端音频文件");
       return;
     }
     setMusic({
@@ -2268,7 +2268,7 @@ export function PublishModal({
 
                 {/* 音频来源：上传文件 / 直链URL 切换 */}
                 <div>
-                  <label className="mb-1.5 block text-xs font-medium text-wechat-time">R2 音频文件</label>
+                  <label className="mb-1.5 block text-xs font-medium text-wechat-time">云端音频文件</label>
                   {uploadedAudioUrl ? (
                       <div className="flex items-center justify-between rounded-lg border border-black/5 bg-wechat-bubble px-3 py-2.5 dark:border-white/5 dark:bg-white/5">
                         <div className="flex min-w-0 items-center gap-2">

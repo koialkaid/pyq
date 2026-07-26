@@ -316,8 +316,8 @@ router.delete("/admin/catalog/:collection/categories/:id", authenticate, require
 async function validateImageMedia(id: unknown, userId: string) {
   if (id == null || id === "") return null;
   if (typeof id !== "string") throw new Error("图片无效");
-  const media = await Media.findOne({ where: { id, uploaderId: userId, storageType: "r2" } });
-  if (!media || !media.mimeType.startsWith("image/")) throw new Error("图片必须是本人上传的 R2 图片");
+  const media = await Media.findOne({ where: { id, uploaderId: userId } });
+  if (!media || !media.mimeType.startsWith("image/")) throw new Error("图片必须是本人上传的云端图片");
   return media.id;
 }
 
