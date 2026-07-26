@@ -20,6 +20,7 @@ export default function AdminLayoutClient({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const isLoginPage = pathname === "/admin/login";
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
@@ -35,13 +36,18 @@ export default function AdminLayoutClient({
   const hasMusic = !!(activePostMusic || bgMusic || musicUrl || playlist.length);
 
   useEffect(() => {
+    if (isLoginPage) {
+      setLoading(false);
+      return;
+    }
+
     const token = localStorage.getItem("admin_token");
     if (!token) {
       router.replace("/");
     }
     setLoading(false);
     if (token) fetchSettings();
-  }, [router, fetchSettings]);
+  }, [router, fetchSettings, isLoginPage]);
 
   // 侧栏收缩状态持久化
   useEffect(() => {
@@ -68,6 +74,10 @@ export default function AdminLayoutClient({
     if (mobileNavOpen) mobileNav.handleClose();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (
