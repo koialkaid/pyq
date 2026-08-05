@@ -66,6 +66,8 @@ interface PostAttributes {
   excerpt: string;
   cover: string;
   category: string;
+  series: string;
+  seriesOrder: number;
   content: string;
   images: string[];
   location: PostLocation | null;
@@ -93,7 +95,7 @@ interface PostAttributes {
   status: "published" | "draft";
 }
 
-interface PostCreationAttributes extends Optional<PostAttributes, "id" | "shortId" | "type" | "title" | "excerpt" | "cover" | "category" | "pinned" | "isAd" | "adAvatar" | "adNickname" | "likesDisabled" | "commentsDisabled" | "ip" | "region" | "articleType" | "repostUrl" | "viewCount" | "status"> {}
+interface PostCreationAttributes extends Optional<PostAttributes, "id" | "shortId" | "type" | "title" | "excerpt" | "cover" | "category" | "series" | "seriesOrder" | "pinned" | "isAd" | "adAvatar" | "adNickname" | "likesDisabled" | "commentsDisabled" | "ip" | "region" | "articleType" | "repostUrl" | "viewCount" | "status"> {}
 
 class Post
   extends Model<PostAttributes, PostCreationAttributes>
@@ -107,6 +109,8 @@ class Post
   declare excerpt: string;
   declare cover: string;
   declare category: string;
+  declare series: string;
+  declare seriesOrder: number;
   declare content: string;
   declare images: string[];
   declare location: PostLocation | null;
@@ -177,6 +181,17 @@ Post.init(
       type: DataTypes.STRING(50),
       allowNull: false,
       defaultValue: "",
+    },
+    series: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      defaultValue: "",
+    },
+    seriesOrder: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      field: "series_order",
     },
     content: {
       type: DataTypes.TEXT,

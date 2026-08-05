@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, X, Image as ImageIcon, MapPin, Heart, MessageSquare, Pin, Link2, FolderOpen } from "lucide-react";
+import { ArrowLeft, Loader2, X, Image as ImageIcon, MapPin, Heart, MessageSquare, Pin, Link2, FolderOpen, Library } from "lucide-react";
 import ArticleEditor, { buildMusicEmbedHtml, buildLinkCardHtml, buildVideoEmbedHtml } from "@/components/ArticleEditor";
 import MediaPicker from "@/components/MediaPicker";
 import { apiFetch, getToken } from "@/lib/api-fetch";
@@ -23,6 +23,9 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
   /** 朋友圈配文：展示在文章卡片上方的动态文字 */
   const [caption, setCaption] = useState("");
   const [cover, setCover] = useState("");
+  const [category, setCategory] = useState("");
+  const [series, setSeries] = useState("");
+  const [seriesOrder, setSeriesOrder] = useState(0);
   const [articleType, setArticleType] = useState<"original" | "repost" | "ai">("original");
   const [repostUrl, setRepostUrl] = useState("");
   const [loading, setLoading] = useState(isEdit);
@@ -63,6 +66,9 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
 
         setContent(mergedContent);
         setCover(data.cover || "");
+        setCategory(data.category || "");
+        setSeries(data.series || "");
+        setSeriesOrder(Number(data.seriesOrder) || 0);
         setArticleType(data.articleType || "original");
         setRepostUrl(data.repostUrl || "");
         setRegion(data.region || "");
@@ -185,7 +191,9 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
         // excerpt 复用为朋友圈配文（卡片上方文字），不再用标题填充
         excerpt: caption.trim(),
         cover,
-        category: "",
+        category: category.trim(),
+        series: series.trim(),
+        seriesOrder: series.trim() ? seriesOrder : 0,
         articleType,
         repostUrl: articleType === "repost" ? repostUrl.trim() : "",
         region: region || undefined,
@@ -230,7 +238,7 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
     } finally {
       setSaving(null);
     }
-  }, [title, content, caption, cover, articleType, repostUrl, region, likesDisabled, commentsDisabled, pinned, isEdit, articleId, router]);
+  }, [title, content, caption, cover, category, series, seriesOrder, articleType, repostUrl, region, likesDisabled, commentsDisabled, pinned, isEdit, articleId, router]);
 
   // 判断是否有未保存改动
   // - 新建模式：标题或正文任一非空即视为有内容
@@ -394,6 +402,29 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
         {/* 封面 + 定位 + 互动 — 桌面端固定不滚动，内容多时内部滚动 */}
         <aside className="lg:w-80 lg:shrink-0 lg:overflow-y-auto lg:pl-1">
           <div className="space-y-4 lg:pb-2">
+            <div className="rounded-xl border border-adm-border bg-adm-card p-4">
+              <div className="mb-3 flex items-center gap-2 text-xs font-medium text-adm-text-secondary">
+                <Library className="h-4 w-4" />
+                文章整理
+              </div>
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="mb-1 block text-[11px] text-adm-text-tertiary">分类</span>
+                  <input value={category} onChange={(e) => setCategory(e.target.value)} maxLength={50} placeholder="例如：技术、生活" className="w-full rounded-lg border border-adm-border bg-adm-input px-3 py-2 text-sm text-adm-text outline-none focus:ring-2 focus:ring-gray-400/30" />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-[11px] text-adm-text-tertiary">合集</span>
+                  <input value={series} onChange={(e) => setSeries(e.target.value)} maxLength={100} placeholder="连续文章可填写合集名称" className="w-full rounded-lg border border-adm-border bg-adm-input px-3 py-2 text-sm text-adm-text outline-none focus:ring-2 focus:ring-gray-400/30" />
+                </label>
+                {series && (
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] text-adm-text-tertiary">合集篇序</span>
+                    <input type="number" min={0} max={10000} value={seriesOrder} onChange={(e) => setSeriesOrder(Math.max(0, Number(e.target.value) || 0))} className="w-full rounded-lg border border-adm-border bg-adm-input px-3 py-2 text-sm text-adm-text outline-none focus:ring-2 focus:ring-gray-400/30" />
+                  </label>
+                )}
+              </div>
+            </div>
+
             {/* 封面 */}
             <div className="rounded-xl border border-adm-border bg-adm-card p-4">
               <label className="mb-2 block text-xs font-medium text-adm-text-secondary">

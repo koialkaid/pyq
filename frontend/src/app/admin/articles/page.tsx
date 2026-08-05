@@ -16,6 +16,8 @@ interface ArticleListItem {
   excerpt: string;
   cover: string;
   category: string;
+  series: string;
+  seriesOrder: number;
   content: string;
   articleType: "original" | "repost" | "ai";
   repostUrl: string;
@@ -193,6 +195,11 @@ export default function AdminArticlesPage() {
                         {article.category && (
                           <span className="rounded bg-adm-input px-1.5 py-0.5">
                             {article.category}
+                          </span>
+                        )}
+                        {article.series && (
+                          <span className="rounded bg-adm-input px-1.5 py-0.5">
+                            {article.series} · {article.seriesOrder || "未排序"}
                           </span>
                         )}
                         <span>

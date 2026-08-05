@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
-import { Heart, Share2, MessageCircle, ExternalLink } from "lucide-react";
+import { Heart, Share2, MessageCircle, ExternalLink, ChevronLeft, ChevronRight, Layers3 } from "lucide-react";
 import { Post, formatArticleTime } from "@/lib/mock-data";
 import { resolveAvatar } from "@/lib/avatar";
 import { getCurrentUser, authFetchHeaders } from "@/lib/auth";
@@ -47,6 +47,7 @@ export default function ArticleReader({ post }: ArticleReaderProps) {
   const [comments, setComments] = useState(post.comments || []);
   const [viewCount, setViewCount] = useState(post.viewCount || 0);
   const [focusSignal, setFocusSignal] = useState(0);
+  const [seriesArticles, setSeriesArticles] = useState<Post[]>([]);
 
   useEffect(() => {
     setLiked(!!post.meLiked);
@@ -78,6 +79,17 @@ export default function ArticleReader({ post }: ArticleReaderProps) {
       })
       .catch(() => {});
   }, [post.id]);
+
+  useEffect(() => {
+    if (!post.series) {
+      setSeriesArticles([]);
+      return;
+    }
+    fetch(`${API_URL}/posts?type=article&series=${encodeURIComponent(post.series)}&page=1&limit=50`)
+      .then((res) => res.ok ? res.json() : { data: [] })
+      .then((data) => setSeriesArticles((data.data || []).sort((a: Post, b: Post) => (a.seriesOrder || 0) - (b.seriesOrder || 0))))
+      .catch(() => setSeriesArticles([]));
+  }, [post.series]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -219,6 +231,24 @@ export default function ArticleReader({ post }: ArticleReaderProps) {
         postId={post.id}
         className="article-content rich-content mt-5 text-[16px] leading-[1.8] text-wechat-text dark:text-gray-200 md:text-[18px] md:leading-[1.9]"
       />
+
+      {post.series && seriesArticles.length > 0 && (() => {
+        const index = seriesArticles.findIndex((item) => item.id === post.id);
+        const previous = index > 0 ? seriesArticles[index - 1] : null;
+        const next = index >= 0 && index < seriesArticles.length - 1 ? seriesArticles[index + 1] : null;
+        return (
+          <section className="mt-8 border-y border-black/[0.06] py-4 dark:border-white/10">
+            <Link href="/articles" className="flex items-center justify-between text-sm text-wechat-text hover:text-wechat-nickname dark:text-white">
+              <span className="flex items-center gap-2 font-medium"><Layers3 className="h-4 w-4" />{post.series}</span>
+              <span className="text-xs font-normal text-wechat-time">第 {index + 1} / {seriesArticles.length} 篇</span>
+            </Link>
+            <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+              {previous ? <Link href={`/articles/${previous.shortId || previous.id}`} className="flex min-w-0 items-center gap-1 text-wechat-text-secondary hover:text-wechat-nickname"><ChevronLeft className="h-4 w-4 shrink-0" /><span className="truncate">{previous.title}</span></Link> : <span />}
+              {next && <Link href={`/articles/${next.shortId || next.id}`} className="flex min-w-0 items-center justify-end gap-1 text-wechat-text-secondary hover:text-wechat-nickname"><span className="truncate">{next.title}</span><ChevronRight className="h-4 w-4 shrink-0" /></Link>}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* 旧数据兼容：post.music / post.video 独立字段（新文章已内联到正文） */}
       {post.music && <MusicEmbedCard music={post.music} postId={post.id} />}

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { BookText } from "lucide-react";
+import { ArrowRight, BookText } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useSiteSettings } from "@/lib/site-settings-store";
 import { toAbsoluteUrl } from "@/lib/upload";
@@ -86,10 +86,10 @@ export default function ArticleListSidebar() {
       >
         {showArticles && (
           <div className="rounded-2xl bg-wechat-white p-4 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-12px_rgba(0,0,0,0.4)]">
-            <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-wechat-text">
-              <BookText className="h-4 w-4 text-wechat-nickname" />
-              文章列表
-            </h3>
+            <Link href="/articles" className="mb-3 flex items-center justify-between text-sm font-semibold text-wechat-text transition-colors hover:text-wechat-nickname">
+              <span className="flex items-center gap-1.5"><BookText className="h-4 w-4 text-wechat-nickname" />文章列表</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
             {loading ? (
               <div className="space-y-1">
                 {[...Array(5)].map((_, i) => (

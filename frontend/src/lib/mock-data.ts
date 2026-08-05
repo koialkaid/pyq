@@ -99,6 +99,10 @@ export interface Post {
   cover?: string;
   /** 文章分类 */
   category?: string;
+  /** 连续文章所属合集 */
+  series?: string;
+  /** 在合集中的阅读顺序 */
+  seriesOrder?: number;
   /** 发帖省份（IP 解析简称，如"湖北"） */
   region?: string;
   /** 文章类型：original=原创，repost=转载，ai=AI生成 */

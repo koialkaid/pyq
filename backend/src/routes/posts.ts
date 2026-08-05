@@ -175,6 +175,8 @@ function formatPost(
       excerpt: getExcerpt(post),
       cover: post.cover || "",
       category: post.category || "",
+      series: post.series || "",
+      seriesOrder: post.seriesOrder || 0,
       content: post.content,
       images: post.images,
       location: post.location || null,
@@ -221,7 +223,7 @@ function formatPost(
 }
 
 // GET /api/posts - list posts with pagination（排除广告，广告由 /api/ads 单独提供）
-// 支持 ?type=article/moment 过滤，?category=xxx 分类过滤
+// 支持 ?type=article/moment、?category=xxx、?series=xxx 过滤
 router.get("/", authenticateOptional, async (req: AuthRequest, res: Response) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
@@ -236,6 +238,8 @@ router.get("/", authenticateOptional, async (req: AuthRequest, res: Response) =>
   if (categoryParam) {
     where.category = categoryParam;
   }
+  const seriesParam = req.query.series as string;
+  if (seriesParam) where.series = seriesParam;
 
   const { count, rows: posts } = await Post.findAndCountAll({
     distinct: true,
@@ -442,6 +446,8 @@ router.post(
     body("excerpt").optional().trim().isLength({ max: 500 }),
     body("cover").optional().trim().isLength({ max: 512 }),
     body("category").optional().trim().isLength({ max: 50 }),
+    body("series").optional().trim().isLength({ max: 100 }),
+    body("seriesOrder").optional().isInt({ min: 0, max: 10000 }),
     body("articleType").optional().isIn(["original", "repost", "ai"]),
     body("repostUrl").optional().trim().isLength({ max: 500 }),
     body("content").optional().trim(),
@@ -471,6 +477,8 @@ router.post(
       excerpt = "",
       cover = "",
       category = "",
+      series = "",
+      seriesOrder = 0,
       articleType = "original",
       repostUrl = "",
       content = "",
@@ -508,6 +516,8 @@ router.post(
           excerpt,
           cover,
           category,
+          series,
+          seriesOrder,
           articleType,
           repostUrl,
           content,
@@ -559,6 +569,8 @@ router.put(
     body("excerpt").optional({ nullable: true }).trim().isLength({ max: 500 }),
     body("cover").optional({ nullable: true }).trim().isLength({ max: 512 }),
     body("category").optional({ nullable: true }).trim().isLength({ max: 50 }),
+    body("series").optional({ nullable: true }).trim().isLength({ max: 100 }),
+    body("seriesOrder").optional().isInt({ min: 0, max: 10000 }),
     body("articleType").optional().isIn(["original", "repost", "ai"]),
     body("repostUrl").optional().trim().isLength({ max: 500 }),
     body("content").optional().trim(),
@@ -606,6 +618,8 @@ router.put(
       excerpt: req.body.excerpt !== undefined ? req.body.excerpt : post.excerpt,
       cover: req.body.cover !== undefined ? req.body.cover : post.cover,
       category: req.body.category !== undefined ? req.body.category : post.category,
+      series: req.body.series !== undefined ? req.body.series : post.series,
+      seriesOrder: req.body.seriesOrder !== undefined ? req.body.seriesOrder : post.seriesOrder,
       articleType: req.body.articleType !== undefined ? req.body.articleType : post.articleType,
       repostUrl: req.body.repostUrl !== undefined ? req.body.repostUrl : post.repostUrl,
       content: req.body.content !== undefined ? req.body.content : post.content,

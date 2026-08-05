@@ -1,14 +1,19 @@
 import "dotenv/config";
 import fs from "fs/promises";
 import path from "path";
+import { QueryTypes } from "sequelize";
 import { sequelize } from "../models";
 
 async function main(): Promise<void> {
   await sequelize.authenticate();
   try {
     const tables: Record<string, unknown[]> = {};
+    // Read the live table columns directly. This keeps a pre-migration backup
+    // possible when the code model already contains additive new columns.
     for (const model of Object.values(sequelize.models).sort((a, b) => a.name.localeCompare(b.name))) {
-      tables[model.tableName] = await model.findAll({ raw: true });
+      const tableName = model.tableName;
+      const quoted = sequelize.getQueryInterface().quoteIdentifier(tableName);
+      tables[tableName] = await sequelize.query(`SELECT * FROM ${quoted}`, { type: QueryTypes.SELECT });
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
