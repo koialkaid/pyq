@@ -1,0 +1,48 @@
+预计需要00时10分钟完成。
+
+请接管并继续维护我的 Koi 云博客项目。这是一台全新的 Windows 电脑，没有旧聊天上下文，也可能尚未存在本地仓库。
+
+项目资料：
+- GitHub：https://github.com/koialkaid/pyq.git
+- 默认分支：master
+- 建议目录：$HOME\Projects\pyq
+- 正式博客：https://koialkaid-blog.vercel.app
+- 文章目录：https://koialkaid-blog.vercel.app/articles
+- 管理后台：https://koialkaid-blog.vercel.app/admin/login
+- 后端健康检查：https://koialkaid-blog-api.vercel.app/api/health
+- 旧博客归档：https://koialkaid.github.io/blog/
+
+请主动完成以下接管工作，不要只给我一串命令：
+
+1. 检查 Git、Node.js 和 npm；缺少时在 Windows 使用 winget 安装 Git.Git 和 OpenJS.NodeJS.LTS，并在需要重新打开终端时明确告诉我。
+2. 如果仓库不存在，克隆到 $HOME\Projects\pyq；如果已存在，先检查未提交修改，再检出 master 并执行 git pull --ff-only origin master。不要使用 git reset --hard。
+3. 完整阅读 项目日志.md、新电脑接管指南.md、部署文档.md、backend/VERCEL_DEPLOYMENT.md、CLAUDE.md 和 frontend/AGENTS.md。不要要求我重新说明仓库、部署和旧站关系。
+4. 在 backend 和 frontend 分别执行 npm.cmd ci 与 npm.cmd run build。
+5. 检查正式博客、文章目录、后台登录页和后端健康接口。
+6. 汇报当前分支、最新提交、工作区状态、构建结果和线上状态。
+
+安全要求：
+- 不要读取、打印、提交或让我在聊天中发送密码、Token、数据库连接串、Supabase Secret Key 或 backend/.env 内容。
+- 普通克隆、构建和前端开发不需要 backend/.env。只有本地运行后端、数据库迁移/备份或存储维护时，才使用我在新电脑本地安全放置的 backend/.env。
+- backend/.env 和 backend/backups/ 必须保持 Git 忽略。
+- 不删除或修改旧博客仓库 koialkaid/blog 和旧 GitHub Pages。
+- 不回退用户已有修改，不执行破坏性数据库、存储或 Git 操作。
+
+当前功能基线：
+- 公开文章目录、分类和合集已经上线。
+- 后台支持分类/合集选择、篇序自动加一、插入顺延和同合集调换。
+- 桌面文章详情有章节/合集分段目录，移动端有折叠合集目录。
+- 功能基线提交为 7d56c07，但必须以远端最新 master 为准。
+
+当前第一优先级开发问题：
+- 文章详情左侧章节/合集目录存在异步竞态。页面可能先显示章节，短暂卡顿后错误地默认切到合集。
+- 正确行为：文章有章节时默认永远是章节；合集请求完成不能改变默认选项。只有章节提取完成并确认没有章节时才默认合集。
+- 修复时应消除重复合集请求，并保留用户主动选择的目录模式。
+
+协作规则：
+- 每次回复，包括过程更新和最终答复，都必须以“预计需要xx时xx分钟完成。”开头。
+- 能安全自行完成的检查、修改、构建、测试、提交、推送和部署验收由你直接完成。
+- 修改前先理解现有风格和项目约束；前端必须保持现有视觉参数和布局语言。
+- 除非我明确改变优先级，接管确认后先解决上述章节/合集默认状态问题。
+
+先完成只读接管检查和构建验收，向我汇报结果，然后等待我确认是否开始修复当前第一优先级问题。
