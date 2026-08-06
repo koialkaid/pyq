@@ -14,6 +14,11 @@ interface ArticleEditorPageProps {
   articleId?: string;
 }
 
+interface ArticleOrganization {
+  categories: string[];
+  series: Array<{ name: string; count: number; maxOrder: number; articles: Array<{ id: string; title: string; order: number }> }>;
+}
+
 export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps) {
   const router = useRouter();
   const isEdit = !!articleId;
@@ -26,6 +31,8 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
   const [category, setCategory] = useState("");
   const [series, setSeries] = useState("");
   const [seriesOrder, setSeriesOrder] = useState(0);
+  const [seriesOrderMode, setSeriesOrderMode] = useState<"insert" | "swap">("insert");
+  const [organization, setOrganization] = useState<ArticleOrganization>({ categories: [], series: [] });
   const [articleType, setArticleType] = useState<"original" | "repost" | "ai">("original");
   const [repostUrl, setRepostUrl] = useState("");
   const [loading, setLoading] = useState(isEdit);
@@ -40,6 +47,14 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   // 编辑模式：加载完成后记录初始快照，用于判断是否有未保存改动
   const initialSnapshotRef = useRef<{ title: string; content: string; caption: string } | null>(null);
+  const originalSeriesRef = useRef("");
+
+  useEffect(() => {
+    apiFetch("/posts/article-organization")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => data && setOrganization({ categories: data.categories || [], series: data.series || [] }))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!articleId) return;
@@ -69,6 +84,7 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
         setCategory(data.category || "");
         setSeries(data.series || "");
         setSeriesOrder(Number(data.seriesOrder) || 0);
+        originalSeriesRef.current = data.series || "";
         setArticleType(data.articleType || "original");
         setRepostUrl(data.repostUrl || "");
         setRegion(data.region || "");
@@ -88,6 +104,21 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
       }
     })();
   }, [articleId, router]);
+
+  const selectedSeries = organization.series.find((item) => item.name === series);
+  const conflictingArticle = selectedSeries?.articles.find((item) => item.order === seriesOrder && item.id !== articleId);
+  const handleSeriesChange = useCallback((value: string) => {
+    setSeries(value);
+    const option = organization.series.find((item) => item.name === value);
+    if (!value) {
+      setSeriesOrder(0);
+      return;
+    }
+    if (!isEdit || value !== originalSeriesRef.current) {
+      setSeriesOrder((option?.maxOrder || 0) + 1);
+      setSeriesOrderMode("insert");
+    }
+  }, [isEdit, organization.series]);
 
   const handleAutoLocate = useCallback(async () => {
     setLocating(true);
@@ -194,6 +225,7 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
         category: category.trim(),
         series: series.trim(),
         seriesOrder: series.trim() ? seriesOrder : 0,
+        seriesOrderMode: series.trim() ? seriesOrderMode : "insert",
         articleType,
         repostUrl: articleType === "repost" ? repostUrl.trim() : "",
         region: region || undefined,
@@ -238,7 +270,7 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
     } finally {
       setSaving(null);
     }
-  }, [title, content, caption, cover, category, series, seriesOrder, articleType, repostUrl, region, likesDisabled, commentsDisabled, pinned, isEdit, articleId, router]);
+  }, [title, content, caption, cover, category, series, seriesOrder, seriesOrderMode, articleType, repostUrl, region, likesDisabled, commentsDisabled, pinned, isEdit, articleId, router]);
 
   // 判断是否有未保存改动
   // - 新建模式：标题或正文任一非空即视为有内容
@@ -410,17 +442,33 @@ export default function ArticleEditorPage({ articleId }: ArticleEditorPageProps)
               <div className="space-y-3">
                 <label className="block">
                   <span className="mb-1 block text-[11px] text-adm-text-tertiary">分类</span>
-                  <input value={category} onChange={(e) => setCategory(e.target.value)} maxLength={50} placeholder="例如：技术、生活" className="w-full rounded-lg border border-adm-border bg-adm-input px-3 py-2 text-sm text-adm-text outline-none focus:ring-2 focus:ring-gray-400/30" />
+                  <input list="article-category-options" value={category} onChange={(e) => setCategory(e.target.value)} maxLength={50} placeholder="选择或输入分类" className="w-full rounded-lg border border-adm-border bg-adm-input px-3 py-2 text-sm text-adm-text outline-none focus:ring-2 focus:ring-gray-400/30" />
+                  <datalist id="article-category-options">{organization.categories.map((item) => <option key={item} value={item} />)}</datalist>
                 </label>
                 <label className="block">
                   <span className="mb-1 block text-[11px] text-adm-text-tertiary">合集</span>
-                  <input value={series} onChange={(e) => setSeries(e.target.value)} maxLength={100} placeholder="连续文章可填写合集名称" className="w-full rounded-lg border border-adm-border bg-adm-input px-3 py-2 text-sm text-adm-text outline-none focus:ring-2 focus:ring-gray-400/30" />
+                  <input list="article-series-options" value={series} onChange={(e) => handleSeriesChange(e.target.value)} maxLength={100} placeholder="选择或输入合集名称" className="w-full rounded-lg border border-adm-border bg-adm-input px-3 py-2 text-sm text-adm-text outline-none focus:ring-2 focus:ring-gray-400/30" />
+                  <datalist id="article-series-options">{organization.series.map((item) => <option key={item.name} value={item.name}>{item.count} 篇</option>)}</datalist>
                 </label>
                 {series && (
-                  <label className="block">
-                    <span className="mb-1 block text-[11px] text-adm-text-tertiary">合集篇序</span>
-                    <input type="number" min={0} max={10000} value={seriesOrder} onChange={(e) => setSeriesOrder(Math.max(0, Number(e.target.value) || 0))} className="w-full rounded-lg border border-adm-border bg-adm-input px-3 py-2 text-sm text-adm-text outline-none focus:ring-2 focus:ring-gray-400/30" />
-                  </label>
+                  <div className="space-y-2">
+                    <label className="block">
+                      <span className="mb-1 block text-[11px] text-adm-text-tertiary">合集篇序</span>
+                      <input type="number" min={1} max={10000} value={seriesOrder || ""} onChange={(e) => setSeriesOrder(Math.max(1, Number(e.target.value) || 1))} className="w-full rounded-lg border border-adm-border bg-adm-input px-3 py-2 text-sm text-adm-text outline-none focus:ring-2 focus:ring-gray-400/30" />
+                    </label>
+                    {conflictingArticle && (
+                      <div className="rounded-lg bg-adm-input px-3 py-2 text-[11px] leading-5 text-adm-text-secondary">
+                        第 {seriesOrder} 篇已有《{conflictingArticle.title}》
+                        {isEdit && originalSeriesRef.current === series ? (
+                          <div className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-adm-card p-1">
+                            <button type="button" onClick={() => setSeriesOrderMode("insert")} className={`rounded px-2 py-1.5 ${seriesOrderMode === "insert" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-adm-text-secondary"}`}>插入并顺延</button>
+                            <button type="button" onClick={() => setSeriesOrderMode("swap")} className={`rounded px-2 py-1.5 ${seriesOrderMode === "swap" ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900" : "text-adm-text-secondary"}`}>与它调换</button>
+                          </div>
+                        ) : <p className="mt-1">新文章将插入此处，后续篇目顺延。</p>}
+                      </div>
+                    )}
+                    {!conflictingArticle && selectedSeries && <p className="text-[11px] text-adm-text-tertiary">将作为第 {seriesOrder} 篇保存。</p>}
+                  </div>
                 )}
               </div>
             </div>

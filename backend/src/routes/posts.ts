@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { body, param, validationResult } from "express-validator";
-import { Op, fn, col } from "sequelize";
-import { Post, Comment, Like, CommentLike, User, SiteSetting, Media } from "../models";
+import { Op, fn, col, Transaction } from "sequelize";
+import { Post, Comment, Like, CommentLike, User, SiteSetting, Media, sequelize } from "../models";
 import { authenticate, authenticateOptional, AuthRequest, requireAdmin } from "../middleware/auth";
 import { getClientIp } from "../utils/ip";
 import { getRegionByIp } from "../utils/region";
@@ -16,6 +16,79 @@ const router = Router();
 
 /** 自动临时封禁时长：1 小时 */
 const AUTO_BAN_DURATION = 60 * 60 * 1000;
+
+type SeriesOrderMode = "insert" | "swap";
+
+async function seriesPosts(series: string, transaction: Transaction, excludeId?: string) {
+  return Post.findAll({
+    where: {
+      type: "article",
+      series,
+      ...(excludeId ? { id: { [Op.ne]: excludeId } } : {}),
+    },
+    order: [["seriesOrder", "ASC"], ["createdAt", "ASC"]],
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
+}
+
+async function compactSeries(series: string, transaction: Transaction, excludeId?: string) {
+  if (!series) return;
+  const posts = await seriesPosts(series, transaction, excludeId);
+  for (let index = 0; index < posts.length; index++) {
+    const order = index + 1;
+    if (posts[index].seriesOrder !== order) {
+      await posts[index].update({ seriesOrder: order }, { transaction });
+    }
+  }
+}
+
+async function resolveSeriesOrder(options: {
+  postId?: string;
+  currentSeries?: string;
+  targetSeries: string;
+  requestedOrder: number;
+  mode: SeriesOrderMode;
+  transaction: Transaction;
+}) {
+  const { postId, currentSeries = "", targetSeries, requestedOrder, mode, transaction } = options;
+  if (!targetSeries) {
+    if (currentSeries) await compactSeries(currentSeries, transaction, postId);
+    return 0;
+  }
+
+  if (mode === "swap" && postId && currentSeries === targetSeries) {
+    const posts = await seriesPosts(targetSeries, transaction);
+    for (let index = 0; index < posts.length; index++) {
+      if (posts[index].seriesOrder !== index + 1) {
+        await posts[index].update({ seriesOrder: index + 1 }, { transaction });
+      }
+    }
+    const currentIndex = posts.findIndex((item) => item.id === postId);
+    if (currentIndex >= 0) {
+      const targetOrder = Math.min(posts.length, Math.max(1, requestedOrder || currentIndex + 1));
+      const target = posts[targetOrder - 1];
+      if (target && target.id !== postId) {
+        await target.update({ seriesOrder: currentIndex + 1 }, { transaction });
+      }
+      return targetOrder;
+    }
+  }
+
+  if (currentSeries && currentSeries !== targetSeries) {
+    await compactSeries(currentSeries, transaction, postId);
+  }
+  const peers = await seriesPosts(targetSeries, transaction, postId);
+  const targetOrder = Math.min(peers.length + 1, Math.max(1, requestedOrder || peers.length + 1));
+  for (let index = 0; index < peers.length; index++) {
+    const naturalOrder = index + 1;
+    const finalOrder = naturalOrder >= targetOrder ? naturalOrder + 1 : naturalOrder;
+    if (peers[index].seriesOrder !== finalOrder) {
+      await peers[index].update({ seriesOrder: finalOrder }, { transaction });
+    }
+  }
+  return targetOrder;
+}
 
 /**
  * 生成文章摘要：
@@ -316,6 +389,32 @@ router.get("/", authenticateOptional, async (req: AuthRequest, res: Response) =>
   });
 });
 
+// GET /api/posts/article-organization - category and series choices for the editor
+router.get("/article-organization", authenticate, requireAdmin, async (_req: AuthRequest, res: Response) => {
+  const posts = await Post.findAll({
+    attributes: ["id", "title", "category", "series", "seriesOrder", "status"],
+    where: { type: "article", isAd: false },
+    order: [["series", "ASC"], ["seriesOrder", "ASC"], ["createdAt", "ASC"]],
+    raw: true,
+  }) as any[];
+  const categories = Array.from(new Set(posts.map((post) => String(post.category || "").trim()).filter(Boolean))).sort();
+  const grouped = new Map<string, any[]>();
+  for (const post of posts) {
+    const name = String(post.series || "").trim();
+    if (!name) continue;
+    const items = grouped.get(name) || [];
+    items.push({ id: post.id, title: post.title || "无标题", order: Number(post.seriesOrder) || 0, status: post.status });
+    grouped.set(name, items);
+  }
+  const series = Array.from(grouped.entries()).map(([name, items]) => ({
+    name,
+    count: items.length,
+    maxOrder: items.reduce((max, item) => Math.max(max, item.order), 0),
+    articles: items,
+  }));
+  res.json({ categories, series });
+});
+
 // GET /api/posts/search?q=keyword — compact keyword search (title, excerpt, content)
 // Must be registered before /:id so that "/search" is not parsed as an id.
 router.get("/search", async (req: Request, res: Response) => {
@@ -448,6 +547,7 @@ router.post(
     body("category").optional().trim().isLength({ max: 50 }),
     body("series").optional().trim().isLength({ max: 100 }),
     body("seriesOrder").optional().isInt({ min: 0, max: 10000 }),
+    body("seriesOrderMode").optional().isIn(["insert", "swap"]),
     body("articleType").optional().isIn(["original", "repost", "ai"]),
     body("repostUrl").optional().trim().isLength({ max: 500 }),
     body("content").optional().trim(),
@@ -479,6 +579,7 @@ router.post(
       category = "",
       series = "",
       seriesOrder = 0,
+      seriesOrderMode = "insert",
       articleType = "original",
       repostUrl = "",
       content = "",
@@ -508,32 +609,37 @@ router.post(
     let post: Post | null = null;
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
-        post = await Post.create({
-          userId: req.user!.id,
-          shortId: generateShortId(),
-          type,
-          title,
-          excerpt,
-          cover,
-          category,
-          series,
-          seriesOrder,
-          articleType,
-          repostUrl,
-          content,
-          images,
-          location,
-          music: normalizedMusic,
-          linkCard,
-          video,
-          douban,
-          isAd,
-          likesDisabled,
-          commentsDisabled,
-          pinned: finalPinned,
-          status,
-          ip,
-          region,
+        post = await sequelize.transaction(async (transaction) => {
+          const finalSeriesOrder = type === "article"
+            ? await resolveSeriesOrder({ targetSeries: series, requestedOrder: Number(seriesOrder), mode: seriesOrderMode, transaction })
+            : 0;
+          return Post.create({
+            userId: req.user!.id,
+            shortId: generateShortId(),
+            type,
+            title,
+            excerpt,
+            cover,
+            category,
+            series,
+            seriesOrder: finalSeriesOrder,
+            articleType,
+            repostUrl,
+            content,
+            images,
+            location,
+            music: normalizedMusic,
+            linkCard,
+            video,
+            douban,
+            isAd,
+            likesDisabled,
+            commentsDisabled,
+            pinned: finalPinned,
+            status,
+            ip,
+            region,
+          }, { transaction });
         });
         break;
       } catch (err: any) {
@@ -571,6 +677,7 @@ router.put(
     body("category").optional({ nullable: true }).trim().isLength({ max: 50 }),
     body("series").optional({ nullable: true }).trim().isLength({ max: 100 }),
     body("seriesOrder").optional().isInt({ min: 0, max: 10000 }),
+    body("seriesOrderMode").optional().isIn(["insert", "swap"]),
     body("articleType").optional().isIn(["original", "repost", "ai"]),
     body("repostUrl").optional().trim().isLength({ max: 500 }),
     body("content").optional().trim(),
@@ -612,14 +719,29 @@ router.put(
         ? incomingPinned
         : post.pinned;
 
-    await post.update({
-      type: req.body.type !== undefined ? req.body.type : post.type,
+    await sequelize.transaction(async (transaction) => {
+      const lockedPost = await Post.findByPk(post.id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!lockedPost) throw new Error("文章不存在");
+      const finalType = req.body.type !== undefined ? req.body.type : lockedPost.type;
+      const finalSeries = finalType === "article" ? (req.body.series !== undefined ? req.body.series : lockedPost.series) : "";
+      const requestedOrder = req.body.seriesOrder !== undefined ? Number(req.body.seriesOrder) : lockedPost.seriesOrder;
+      const mode: SeriesOrderMode = req.body.seriesOrderMode === "swap" ? "swap" : "insert";
+      const finalSeriesOrder = await resolveSeriesOrder({
+        postId: lockedPost.id,
+        currentSeries: lockedPost.series,
+        targetSeries: finalSeries,
+        requestedOrder,
+        mode,
+        transaction,
+      });
+      await lockedPost.update({
+      type: finalType,
       title: req.body.title !== undefined ? req.body.title : post.title,
       excerpt: req.body.excerpt !== undefined ? req.body.excerpt : post.excerpt,
       cover: req.body.cover !== undefined ? req.body.cover : post.cover,
       category: req.body.category !== undefined ? req.body.category : post.category,
-      series: req.body.series !== undefined ? req.body.series : post.series,
-      seriesOrder: req.body.seriesOrder !== undefined ? req.body.seriesOrder : post.seriesOrder,
+      series: finalSeries,
+      seriesOrder: finalSeriesOrder,
       articleType: req.body.articleType !== undefined ? req.body.articleType : post.articleType,
       repostUrl: req.body.repostUrl !== undefined ? req.body.repostUrl : post.repostUrl,
       content: req.body.content !== undefined ? req.body.content : post.content,
@@ -635,7 +757,9 @@ router.put(
       commentsDisabled: req.body.commentsDisabled !== undefined ? req.body.commentsDisabled : post.commentsDisabled,
       pinned: finalPinned,
       status: req.body.status !== undefined ? req.body.status : post.status,
+      }, { transaction });
     });
+    await post.reload();
 
     // 触发首页 ISR 重生成，确保刷新页面看到最新动态
     triggerRevalidate();
@@ -663,7 +787,11 @@ router.delete(
       return;
     }
 
-    await post.destroy();
+    await sequelize.transaction(async (transaction) => {
+      const series = post.series;
+      await post.destroy({ transaction });
+      if (series) await compactSeries(series, transaction);
+    });
     // 触发首页 ISR 重生成，确保刷新页面看到最新动态
     triggerRevalidate();
     res.status(204).send();

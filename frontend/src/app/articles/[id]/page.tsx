@@ -84,7 +84,7 @@ export default async function ArticleDetailPage({
         <Sidebar owner={owner} />
 
         {/* 桌面端左侧章节目录 */}
-        <ArticleTOC />
+        <ArticleTOC series={post.series} currentArticleId={post.id} />
       </div>
 
       <FloatingActions liftAboveBottomBar />

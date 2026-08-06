@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
-import { Heart, Share2, MessageCircle, ExternalLink, ChevronLeft, ChevronRight, Layers3 } from "lucide-react";
+import { Heart, Share2, MessageCircle, ExternalLink, ChevronLeft, ChevronRight, ChevronDown, Layers3 } from "lucide-react";
 import { Post, formatArticleTime } from "@/lib/mock-data";
 import { resolveAvatar } from "@/lib/avatar";
 import { getCurrentUser, authFetchHeaders } from "@/lib/auth";
@@ -48,6 +48,7 @@ export default function ArticleReader({ post }: ArticleReaderProps) {
   const [viewCount, setViewCount] = useState(post.viewCount || 0);
   const [focusSignal, setFocusSignal] = useState(0);
   const [seriesArticles, setSeriesArticles] = useState<Post[]>([]);
+  const [seriesOpen, setSeriesOpen] = useState(false);
 
   useEffect(() => {
     setLiked(!!post.meLiked);
@@ -181,9 +182,9 @@ export default function ArticleReader({ post }: ArticleReaderProps) {
       {/* 分类标签 */}
       {post.category && (
         <div className="mb-3">
-          <span className="inline-block rounded bg-wechat-bubble px-2 py-0.5 text-xs text-wechat-nickname">
+          <Link href={`/articles?category=${encodeURIComponent(post.category)}`} className="inline-block rounded bg-wechat-bubble px-2 py-0.5 text-xs text-wechat-nickname transition-colors hover:bg-wechat-nickname/10">
             {post.category}
-          </span>
+          </Link>
         </div>
       )}
 
@@ -238,10 +239,12 @@ export default function ArticleReader({ post }: ArticleReaderProps) {
         const next = index >= 0 && index < seriesArticles.length - 1 ? seriesArticles[index + 1] : null;
         return (
           <section className="mt-8 border-y border-black/[0.06] py-4 dark:border-white/10">
-            <Link href="/articles" className="flex items-center justify-between text-sm text-wechat-text hover:text-wechat-nickname dark:text-white">
-              <span className="flex items-center gap-2 font-medium"><Layers3 className="h-4 w-4" />{post.series}</span>
+            <div className="flex items-center justify-between gap-2">
+              <Link href={`/articles?series=${encodeURIComponent(post.series)}`} className="flex min-w-0 items-center gap-2 text-sm font-medium text-wechat-text hover:text-wechat-nickname dark:text-white"><Layers3 className="h-4 w-4 shrink-0" /><span className="truncate">{post.series}</span></Link>
               <span className="text-xs font-normal text-wechat-time">第 {index + 1} / {seriesArticles.length} 篇</span>
-            </Link>
+              <button type="button" onClick={() => setSeriesOpen((open) => !open)} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-wechat-time hover:bg-wechat-hover" aria-label="展开合集目录"><ChevronDown className={`h-4 w-4 transition-transform ${seriesOpen ? "rotate-180" : ""}`} /></button>
+            </div>
+            {seriesOpen && <nav className="mt-3 max-h-56 space-y-0.5 overflow-y-auto border-t border-black/[0.06] pt-2 dark:border-white/10">{seriesArticles.map((article, articleIndex) => <Link key={article.id} href={`/articles/${article.shortId || article.id}`} className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-xs ${article.id === post.id ? "bg-wechat-nickname/10 font-medium text-wechat-nickname" : "text-wechat-time hover:bg-wechat-hover"}`}><span className="w-4 shrink-0 text-right tabular-nums">{article.seriesOrder || articleIndex + 1}</span><span className="line-clamp-1">{article.title || "无标题"}</span></Link>)}</nav>}
             <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
               {previous ? <Link href={`/articles/${previous.shortId || previous.id}`} className="flex min-w-0 items-center gap-1 text-wechat-text-secondary hover:text-wechat-nickname"><ChevronLeft className="h-4 w-4 shrink-0" /><span className="truncate">{previous.title}</span></Link> : <span />}
               {next && <Link href={`/articles/${next.shortId || next.id}`} className="flex min-w-0 items-center justify-end gap-1 text-wechat-text-secondary hover:text-wechat-nickname"><span className="truncate">{next.title}</span><ChevronRight className="h-4 w-4 shrink-0" /></Link>}
