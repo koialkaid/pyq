@@ -159,10 +159,54 @@ function RainCanvas({ enabled }: { enabled: boolean }) {
       context.restore();
     };
 
+    const drawWaterSurface = (time: number) => {
+      const waterTop = Math.floor(canvas.height * 0.38);
+      const waterHeight = canvas.height - waterTop;
+      const stripHeight = Math.max(8, Math.round((width < 768 ? 12 : 9) * pixelRatio));
+
+      context.save();
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.beginPath();
+      context.rect(0, waterTop, canvas.width, waterHeight);
+      context.clip();
+
+      // A slow whole-surface drift gives the water body direction before the
+      // finer refraction strips add rain-driven movement and depth.
+      const driftX = Math.sin(time * 0.00013) * 6.5 * pixelRatio;
+      const driftY = Math.sin(time * 0.00019) * 1.05 * pixelRatio;
+      context.globalAlpha = 0.24;
+      context.drawImage(
+        backdrop,
+        0,
+        waterTop,
+        canvas.width,
+        waterHeight,
+        driftX,
+        waterTop + driftY,
+        canvas.width,
+        waterHeight,
+      );
+
+      context.globalAlpha = 0.62;
+      for (let y = waterTop; y < canvas.height; y += stripHeight) {
+        const depth = (y - waterTop) / Math.max(1, waterHeight);
+        const wave =
+          Math.sin(time * 0.00072 + y * 0.021) * 2.35 +
+          Math.sin(time * 0.00031 - y * 0.008) * 1.45;
+        const shiftX = wave * (0.38 + depth * 1.02) * pixelRatio;
+        const shiftY = Math.sin(time * 0.00048 + y * 0.014) * depth * 0.95 * pixelRatio;
+        const height = Math.min(stripHeight + 1, canvas.height - y);
+        context.drawImage(backdrop, 0, y, canvas.width, height, shiftX, y + shiftY, canvas.width, height);
+      }
+
+      context.restore();
+    };
+
     const draw = (time: number) => {
       const delta = Math.min(0.034, (time - lastTime) / 1000);
       lastTime = time;
       drawStatic();
+      drawWaterSurface(time);
 
       context.lineCap = "round";
       for (const drop of drops) {
