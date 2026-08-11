@@ -60,7 +60,7 @@ function ArticleList({ articles, defaultCover, showOrder }: { articles: Post[]; 
   return <div className="mt-3 divide-y divide-black/[0.06] dark:divide-white/10">{articles.map((article, index) => (
     <Link key={article.id} href={`/articles/${article.shortId || article.id}`} className="group flex min-h-20 items-center gap-3 py-3">
       <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-md bg-wechat-bubble dark:bg-white/5">{(article.cover || defaultCover) && <img src={toAbsoluteUrl(article.cover || defaultCover || "")} alt="" className="h-full w-full object-cover" />}</div>
-      <div className="min-w-0 flex-1"><div className="flex items-center gap-2">{showOrder && <span className="text-xs tabular-nums text-wechat-nickname">{article.seriesOrder || index + 1}</span>}<h3 className="line-clamp-2 text-[15px] font-medium leading-6 text-wechat-text transition-colors group-hover:text-wechat-nickname dark:text-white">{article.title || "无标题"}</h3></div><div className="mt-1 flex items-center gap-2 text-xs text-wechat-time">{article.category && <span>{article.category}</span>}<time>{new Date(article.createdAt).toLocaleDateString("zh-CN")}</time></div></div>
+      <div className="min-w-0 flex-1"><div className="flex items-center gap-2">{showOrder && <span className="text-xs tabular-nums text-wechat-nickname">{index + 1}</span>}<h3 className="line-clamp-2 text-[15px] font-medium leading-6 text-wechat-text transition-colors group-hover:text-wechat-nickname dark:text-white">{article.title || "无标题"}</h3></div><div className="mt-1 flex items-center gap-2 text-xs text-wechat-time">{article.category && <span>{article.category}</span>}<time>{new Date(article.createdAt).toLocaleDateString("zh-CN")}</time></div></div>
     </Link>
   ))}</div>;
 }
