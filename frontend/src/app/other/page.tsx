@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export default function OtherPage() {
-  return <main className="mx-auto min-h-screen w-full max-w-3xl px-4 pb-24 pt-28 md:px-8">
+  return <main className="mx-auto min-h-screen w-full max-w-3xl px-4 pb-24 pt-[76px] md:px-8">
     <section className="rounded-2xl bg-wechat-white p-6 shadow-sm md:p-10">
       <p className="text-xs uppercase tracking-widest text-wechat-time">工具空间</p>
       <h1 className="mt-3 text-2xl font-semibold text-wechat-text">其它</h1>

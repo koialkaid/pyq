@@ -416,7 +416,7 @@ export default function TopBar({ coverHeight = 300 }: TopBarProps) {
       {/* Fixed wrapper — no background, just positioning.
           pointer-events-none so the transparent side areas (desktop) don't
           block clicks on the page below; the inner card re-enables events. */}
-      <header data-topbar className="fixed left-1/2 z-50 w-full max-w-[600px] -translate-x-1/2 pointer-events-none top-0 md:top-6">
+      <header data-topbar className="fixed left-1/2 z-50 w-full max-w-[600px] -translate-x-1/2 pointer-events-none top-[64px] md:top-[76px]">
         {/* Inner card-width container — solid floating card fixed at top-6.
             No spacer, no mask — the 24px gap above is just the page background. */}
         <div

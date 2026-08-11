@@ -79,10 +79,10 @@ export default function ArticleListSidebar() {
   if (!showSidebar) return null;
 
   return (
-    <aside className="hidden lg:block lg:fixed lg:top-6 lg:right-[calc(50%+324px)] lg:w-[220px] xl:w-[260px]">
+    <aside className="hidden lg:block lg:fixed lg:top-[76px] lg:right-[calc(50%+324px)] lg:w-[220px] xl:w-[260px]">
       <div
         ref={sidebarScrollRef}
-        className="no-scrollbar space-y-4 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:overscroll-contain"
+        className="no-scrollbar space-y-4 lg:max-h-[calc(100vh-100px)] lg:overflow-y-auto lg:overscroll-contain"
       >
         {showArticles && (
           <div className="rounded-2xl bg-wechat-white p-4 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-12px_rgba(0,0,0,0.4)]">

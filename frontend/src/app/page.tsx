@@ -73,10 +73,10 @@ export default async function Home() {
     <div className="relative min-h-screen overflow-x-hidden bg-wechat-white md:bg-wechat-bg">
       <DesktopDecorations />
 
-      <div className="md:pt-6">
+      <div className="md:pt-[76px]">
         <div
           id="scroll-root"
-          className="md:fixed md:top-6 md:left-[calc(50%-300px)] md:z-10 md:h-[calc(100vh-48px)] md:w-[600px] md:overflow-y-auto md:rounded-2xl md:bg-wechat-white md:shadow-[0_8px_40px_-12px_rgba(0,0,0,0.12)] dark:md:shadow-[0_8px_40px_-12px_rgba(0,0,0,0.4)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="md:fixed md:top-[76px] md:left-[calc(50%-300px)] md:z-10 md:h-[calc(100vh-100px)] md:w-[600px] md:overflow-y-auto md:rounded-2xl md:bg-wechat-white md:shadow-[0_8px_40px_-12px_rgba(0,0,0,0.12)] dark:md:shadow-[0_8px_40px_-12px_rgba(0,0,0,0.4)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           <main className="relative w-full bg-wechat-white pb-8 md:pb-12">
             <TopBar coverHeight={300} />

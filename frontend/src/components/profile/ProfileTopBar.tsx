@@ -172,7 +172,7 @@ export default function ProfileTopBar({ coverHeight = 300, initialBgAlpha = 0, s
 
   return (
     <>
-      <header data-topbar className="fixed left-1/2 z-50 w-full max-w-[600px] -translate-x-1/2 pointer-events-none top-0 md:top-6">
+      <header data-topbar className="fixed left-1/2 z-50 w-full max-w-[600px] -translate-x-1/2 pointer-events-none top-[64px] md:top-[76px]">
         <div
           className={`pointer-events-auto ${scrollFade || surfaceColor === "bg" ? "topbar-surface" : "topbar-surface-white"} flex h-12 w-full items-center justify-between px-4 sm:px-5 md:px-6 transition-all duration-300 md:rounded-t-2xl ${
             frosted
