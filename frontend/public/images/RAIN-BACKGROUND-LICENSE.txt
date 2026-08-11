@@ -1,0 +1,10 @@
+Asset: rain-water-cc0.webp
+Title: Rain over water
+Photographer: Guillaume de Germain
+Source: https://commons.wikimedia.org/wiki/File:Rain_over_water_(Unsplash).jpg
+Original gallery: https://unsplash.com/photos/Z8l4vxWTEiY
+License: CC0 1.0 Universal (public domain dedication)
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+
+Project processing: converted to grayscale, darkened, contrast adjusted, and
+encoded as WebP for use as the Koi Blog rain background.

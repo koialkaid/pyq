@@ -147,6 +147,7 @@ body::-webkit-scrollbar {
   position: relative;
   min-height: 100vh;
   isolation: isolate;
+  --rain-inner-opacity: calc(var(--rain-card-opacity) * 0.55);
 }
 
 .rain-canvas {
@@ -175,6 +176,16 @@ body::-webkit-scrollbar {
   -webkit-backdrop-filter: blur(12px) saturate(0.86);
 }
 
+.rain-content-layer #scroll-root .bg-wechat-white,
+.rain-content-layer .rounded-2xl.bg-wechat-white .bg-wechat-white,
+.rain-content-layer .bg-wechat-bubble,
+.rain-content-layer .bg-white,
+.rain-content-layer [class~="bg-white/35"] {
+  background-color: rgba(255, 255, 255, var(--rain-inner-opacity)) !important;
+  backdrop-filter: blur(8px) saturate(0.88);
+  -webkit-backdrop-filter: blur(8px) saturate(0.88);
+}
+
 .rain-content-layer #scroll-root > main.bg-wechat-white {
   background-color: transparent !important;
 }
@@ -186,10 +197,27 @@ body::-webkit-scrollbar {
   -webkit-backdrop-filter: blur(12px) saturate(0.86);
 }
 
+.rain-content-layer .topbar-surface,
+.rain-content-layer .topbar-surface-white {
+  background-color: rgba(var(--wechat-white-rgb), min(var(--topbar-bg-alpha, 0), var(--rain-card-opacity))) !important;
+}
+
 .dark .rain-content-layer #scroll-root,
 .dark .rain-content-layer .rounded-2xl.bg-wechat-white,
 .dark .rain-content-layer aside > .bg-wechat-white {
   background-color: rgba(35, 35, 40, var(--rain-card-opacity)) !important;
+}
+
+.dark .rain-content-layer #scroll-root .bg-wechat-white,
+.dark .rain-content-layer .rounded-2xl.bg-wechat-white .bg-wechat-white,
+.dark .rain-content-layer .bg-wechat-bubble,
+.dark .rain-content-layer .bg-white,
+.dark .rain-content-layer [class~="bg-white/35"] {
+  background-color: rgba(35, 35, 40, var(--rain-inner-opacity)) !important;
+}
+
+.dark .rain-content-layer #scroll-root > main.bg-wechat-white {
+  background-color: transparent !important;
 }
 
 .rain-controls {

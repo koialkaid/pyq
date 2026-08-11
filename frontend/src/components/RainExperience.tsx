@@ -45,12 +45,28 @@ function resetDrop(drop: RainDrop, width: number, height: number, initial = fals
   drop.opacity = 0.2 + Math.random() * 0.34;
 }
 
-function createBackdrop(width: number, height: number, dark: boolean) {
+function createBackdrop(width: number, height: number, dark: boolean, image?: HTMLImageElement) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext("2d");
   if (!context) return canvas;
+
+  if (image) {
+    const scale = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+    const drawWidth = image.naturalWidth * scale;
+    const drawHeight = image.naturalHeight * scale;
+    context.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
+    context.fillStyle = dark ? "rgba(5, 8, 10, 0.38)" : "rgba(224, 229, 231, 0.16)";
+    context.fillRect(0, 0, width, height);
+
+    const vignette = context.createRadialGradient(width / 2, height * 0.42, 0, width / 2, height * 0.42, Math.max(width, height) * 0.78);
+    vignette.addColorStop(0, "rgba(0,0,0,0)");
+    vignette.addColorStop(1, dark ? "rgba(0,0,0,0.34)" : "rgba(18,22,24,0.18)");
+    context.fillStyle = vignette;
+    context.fillRect(0, 0, width, height);
+    return canvas;
+  }
 
   const gradient = context.createLinearGradient(0, 0, 0, height);
   if (dark) {
@@ -109,6 +125,8 @@ function RainCanvas({ enabled }: { enabled: boolean }) {
     let pixelRatio = 1;
     let backdrop = document.createElement("canvas");
     let lastTime = performance.now();
+    let backdropImageReady = false;
+    const backdropImage = new Image();
 
     const resize = () => {
       pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -123,6 +141,7 @@ function RainCanvas({ enabled }: { enabled: boolean }) {
         Math.floor(width * pixelRatio),
         Math.floor(height * pixelRatio),
         document.documentElement.classList.contains("dark"),
+        backdropImageReady ? backdropImage : undefined,
       );
       drops.length = 0;
       const dropCount = width < 768 ? 34 : Math.min(110, Math.max(64, Math.round(width / 18)));
@@ -228,6 +247,13 @@ function RainCanvas({ enabled }: { enabled: boolean }) {
     const onVisibilityChange = () => start();
     const onMotionChange = () => start();
 
+    backdropImage.onload = () => {
+      backdropImageReady = true;
+      resize();
+      start();
+    };
+    backdropImage.src = "/images/rain-water-cc0.webp";
+
     resize();
     start();
     window.addEventListener("resize", resize, { passive: true });
@@ -241,6 +267,7 @@ function RainCanvas({ enabled }: { enabled: boolean }) {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       reducedMotion.removeEventListener("change", onMotionChange);
       themeObserver.disconnect();
+      backdropImage.onload = null;
     };
   }, [enabled]);
 
