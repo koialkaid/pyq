@@ -148,6 +148,7 @@ body::-webkit-scrollbar {
   min-height: 100vh;
   isolation: isolate;
   --rain-inner-opacity: calc(var(--rain-card-opacity) * 0.55);
+  --wechat-time: #535960;
 }
 
 .rain-canvas {
@@ -202,6 +203,12 @@ body::-webkit-scrollbar {
   background-color: rgba(var(--wechat-white-rgb), min(var(--topbar-bg-alpha, 0), var(--rain-card-opacity))) !important;
 }
 
+.rain-content-layer [class~="text-wechat-time/70"],
+.rain-content-layer [class~="text-[#9a9a9a]"],
+.rain-content-layer .text-gray-400 {
+  color: #535960 !important;
+}
+
 .dark .rain-content-layer #scroll-root,
 .dark .rain-content-layer .rounded-2xl.bg-wechat-white,
 .dark .rain-content-layer aside > .bg-wechat-white {
@@ -218,6 +225,16 @@ body::-webkit-scrollbar {
 
 .dark .rain-content-layer #scroll-root > main.bg-wechat-white {
   background-color: transparent !important;
+}
+
+.dark .rain-experience {
+  --wechat-time: #b9bec5;
+}
+
+.dark .rain-content-layer [class~="text-wechat-time/70"],
+.dark .rain-content-layer [class~="text-[#9a9a9a]"],
+.dark .rain-content-layer .text-gray-400 {
+  color: #b9bec5 !important;
 }
 
 .rain-controls {
