@@ -57,7 +57,11 @@ export default function AdminMusic() {
       if (!response.ok) throw new Error(data.message || "添加歌曲失败");
       setTracks((current) => [...current, data]);
       setDraft({ audio: null, cover: null, title: "", artist: "", lrc: "" });
-    } catch (error) { setMessage(error instanceof Error ? error.message : "添加歌曲失败"); }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "添加歌曲失败";
+      setMessage(detail);
+      window.alert(detail);
+    }
     finally { setSaving(false); }
   };
   const removeTrack = async (id: string) => {

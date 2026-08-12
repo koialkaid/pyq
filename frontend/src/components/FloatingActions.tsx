@@ -5,7 +5,7 @@ import { useTheme } from "next-themes";
 import { markManualOverride } from "@/lib/dark-mode-override";
 
 export default function FloatingActions({ liftAboveBottomBar = false }: { liftAboveBottomBar?: boolean }) {
-  const [visible, setVisible] = useState(false);
+  const [visible] = useState(true);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   // 记录上次滚动位置，用于判断滚动方向
@@ -25,7 +25,7 @@ export default function FloatingActions({ liftAboveBottomBar = false }: { liftAb
 
         // 顶部一定隐藏
         if (y < 100) {
-          setVisible(false);
+          return;
           lastYRef.current = y;
           return;
         }
@@ -34,11 +34,11 @@ export default function FloatingActions({ liftAboveBottomBar = false }: { liftAb
         // 5px 缓冲区，避免微小抖动导致频繁切换
         if (delta > 5) {
           // 下滑 → 显示
-          setVisible(true);
+          return;
           lastYRef.current = y;
         } else if (delta < -5) {
           // 上滑 → 隐藏
-          setVisible(false);
+          return;
           lastYRef.current = y;
         }
       });

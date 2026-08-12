@@ -135,7 +135,8 @@ router.post("/admin/tracks", authenticate, requireAdmin, async (req: AuthRequest
     const artist = readText(req.body?.artist, "歌手", 255, false) || "";
     const lrc = readText(req.body?.lrc, "歌词", 100_000, false) || "";
     const playlist = await getDefaultPlaylist();
-    const maxOrder = await MusicTrack.max("sortOrder", { where: { playlistId: playlist.id } });
+    const maxOrderValue = await MusicTrack.max("sortOrder", { where: { playlistId: playlist.id } });
+    const maxOrder = Number(maxOrderValue);
     const track = await MusicTrack.create({
       playlistId: playlist.id,
       audioMediaId: audio.id,
@@ -143,7 +144,7 @@ router.post("/admin/tracks", authenticate, requireAdmin, async (req: AuthRequest
       title,
       artist,
       lrc,
-      sortOrder: Number.isFinite(maxOrder) ? Number(maxOrder) + 1 : 0,
+      sortOrder: Number.isFinite(maxOrder) ? maxOrder + 1 : 0,
     });
     const full = await MusicTrack.findByPk(track.id, {
       include: [{ model: Media, as: "audio" }, { model: Media, as: "cover", required: false }],
