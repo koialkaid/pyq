@@ -1,8 +1,0 @@
-Rain audio assets
-
-rain-commons-1.ogg
-Source: https://commons.wikimedia.org/wiki/File:Rain_(1).ogg
-Direct source: https://upload.wikimedia.org/wikipedia/commons/0/0e/Rain_(1).ogg
-License: Public domain (Wikimedia Commons file information, checked 2026-08-11)
-Author: Wikimedia Commons file attribution as listed on the source page.
-The local file is an unmodified copy for browser playback.
