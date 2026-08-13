@@ -33,6 +33,14 @@ function parseLyric(lrc: string): LyricLine[] | null {
 /** Owns the shared R2 audio element and site-wide static playlist state. */
 export default function GlobalMusicManager() {
   const initialized = useRef(false);
+  const autoplayWaitingForGesture = useRef(false);
+
+  const playAfterGesture = () => {
+    const audio = getGlobalAudio();
+    if (!audio || !autoplayWaitingForGesture.current) return;
+    autoplayWaitingForGesture.current = false;
+    audio.play().catch(() => useMusicPlayer.getState().setAudioError(true, "浏览器阻止了自动播放，请点击播放器播放音乐。"));
+  };
 
   useEffect(() => {
     if (initialized.current) return;
@@ -63,11 +71,24 @@ export default function GlobalMusicManager() {
           const audio = getGlobalAudio();
           if (audio) {
             audio.src = musicUrl;
-            audio.play().catch(() => undefined);
+            audio.play().catch((error: unknown) => {
+              if (error instanceof DOMException && error.name === "NotAllowedError") {
+                autoplayWaitingForGesture.current = true;
+                useMusicPlayer.getState().setAudioError(true, "浏览器阻止了带声音的自动播放，请点击页面或播放器后开始播放。" );
+              } else {
+                useMusicPlayer.getState().setAudioError(true, "云端音频文件无法自动播放，请点击播放器重试。" );
+              }
+            });
           }
         }
       })
       .catch(() => useMusicPlayer.setState({ musicLoaded: true, switching: false }));
+  }, []);
+
+  useEffect(() => {
+    const events = ["pointerdown", "keydown", "touchstart"] as const;
+    events.forEach((event) => window.addEventListener(event, playAfterGesture, { passive: true }));
+    return () => events.forEach((event) => window.removeEventListener(event, playAfterGesture));
   }, []);
 
   useEffect(() => {
