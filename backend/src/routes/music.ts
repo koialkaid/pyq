@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { Op } from "sequelize";
-import { Media, MusicPlaylist, MusicTrack, SiteSetting, sequelize, siteSettingTextDefaults } from "../models";
+import { Media, MusicPlaylist, MusicTrack, SiteSetting, User, sequelize, siteSettingTextDefaults } from "../models";
 import { authenticate, requireAdmin, AuthRequest } from "../middleware/auth";
 
 const router = Router();
@@ -46,10 +46,14 @@ async function loadDefaultPlaylist() {
   return { playlist, tracks: tracks as Array<MusicTrack & { audio?: Media; cover?: Media }> };
 }
 
-async function getOwnedMedia(id: unknown, userId: string, category: "audio" | "image") {
+async function getOwnedMedia(id: unknown, _userId: string, category: "audio" | "image") {
   if (typeof id !== "string") return null;
-  const media = await Media.findOne({ where: { id, uploaderId: userId } });
-  if (!media || !media.mimeType.startsWith(`${category}/`)) return null;
+  const media = await Media.findOne({
+    where: { id },
+    include: [{ model: User, as: "uploader", attributes: ["id", "role"] }],
+  });
+  const uploader = (media as (Media & { uploader?: { role?: string } }) | null)?.uploader;
+  if (!media || uploader?.role !== "admin" || !media.mimeType.startsWith(`${category}/`)) return null;
   return media;
 }
 

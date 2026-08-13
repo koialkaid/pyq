@@ -321,7 +321,7 @@ function RainCanvas({ enabled }: { enabled: boolean }) {
 export default function RainExperience({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const active = !pathname.startsWith("/admin");
-  const [cardOpacity, setCardOpacity] = useState(70);
+  const [cardOpacity, setCardOpacity] = useState(45);
   const [rainEnabled, setRainEnabled] = useState(true);
   const [panelOpen, setPanelOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -329,7 +329,7 @@ export default function RainExperience({ children }: { children: ReactNode }) {
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       const storedOpacity = Number(localStorage.getItem(OPACITY_KEY));
-      if (Number.isFinite(storedOpacity) && storedOpacity >= 45 && storedOpacity <= 100) {
+      if (Number.isFinite(storedOpacity) && storedOpacity >= 10 && storedOpacity <= 100) {
         setCardOpacity(storedOpacity);
       }
       setRainEnabled(localStorage.getItem(RAIN_KEY) !== "false");
@@ -377,10 +377,10 @@ export default function RainExperience({ children }: { children: ReactNode }) {
             </label>
             <label className="mt-4 block text-xs text-wechat-time">
               <span className="flex items-center justify-between gap-3"><span>卡片不透明度</span><strong className="font-medium text-wechat-text">{cardOpacity}%</strong></span>
-              <input type="range" min="45" max="100" step="1" value={cardOpacity} onInput={(event) => changeOpacity(Number(event.currentTarget.value))} className="mt-3 w-full accent-[#576b95]" />
+              <input type="range" min="10" max="100" step="1" value={cardOpacity} onInput={(event) => changeOpacity(Number(event.currentTarget.value))} className="mt-3 w-full accent-[#576b95]" />
             </label>
-            <button type="button" onClick={() => changeOpacity(70)} className="mt-3 flex items-center gap-1 text-xs text-wechat-time transition-colors hover:text-wechat-text">
-              <RotateCcw className="h-3.5 w-3.5" />恢复 70%
+            <button type="button" onClick={() => changeOpacity(45)} className="mt-3 flex items-center gap-1 text-xs text-wechat-time transition-colors hover:text-wechat-text">
+              <RotateCcw className="h-3.5 w-3.5" />恢复 45%
             </button>
           </div>
         )}
