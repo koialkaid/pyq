@@ -34,12 +34,14 @@ export function clearAuth() {
 
 export async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
   const token = getToken();
+  const headers = new Headers(options?.headers);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (typeof options?.body === "string" && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   const res = await fetch(`${getApiUrl()}${path}`, {
     ...options,
-    headers: {
-      ...(options?.headers || {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers,
   });
   if (res.status === 401) {
     clearAuth();
