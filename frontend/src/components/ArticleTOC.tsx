@@ -142,8 +142,8 @@ export default function ArticleTOC({ hideWhenEmpty = false, series, currentArtic
   if (!headings.length && !showSeriesTab && hideWhenEmpty) return null;
 
   return (
-    <aside className="hidden lg:block lg:fixed lg:top-6 lg:right-[calc(50%+324px)] lg:w-[220px] xl:w-[260px]">
-      <div className="no-scrollbar max-h-[calc(100vh-3rem)] overflow-y-auto overscroll-contain rounded-2xl bg-wechat-white shadow-[0_8px_40px_-12px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-12px_rgba(0,0,0,0.4)]">
+    <aside className="hidden lg:block lg:fixed lg:top-[76px] lg:right-[calc(50%+324px)] lg:w-[220px] xl:w-[260px]">
+      <div className="no-scrollbar max-h-[calc(100vh-100px)] overflow-y-auto overscroll-contain rounded-2xl bg-wechat-white shadow-[0_8px_40px_-12px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_-12px_rgba(0,0,0,0.4)]">
         {showSeriesTab && (
           <div className="sticky top-0 z-10 grid grid-cols-2 gap-1 border-b border-black/[0.06] bg-wechat-white p-2 dark:border-white/10 dark:bg-wechat-white">
             <button type="button" onClick={() => { modeSelectedByUser.current = true; setMode("chapters"); }} className={`flex h-8 items-center justify-center gap-1 rounded-md text-xs transition-colors ${mode === "chapters" ? "bg-wechat-nickname/10 font-medium text-wechat-nickname" : "text-wechat-time hover:bg-wechat-hover"}`}><BookOpen className="h-3.5 w-3.5" />章节</button>

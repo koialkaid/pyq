@@ -969,6 +969,11 @@ img.inline-emoji.emoji-error {
   overflow-wrap: break-word;
   word-break: break-word;
 }
+
+/* Imported rich text can carry fixed dark inline colors that ignore theme variables. */
+.dark .article-content .article-html-segment :not(a):not(pre):not(code):not(mark)[style*="color"] {
+  color: var(--wechat-text) !important;
+}
 .article-editor-area h1,
 .article-content h1 {
   font-size: 1.6em;

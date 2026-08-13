@@ -24,6 +24,7 @@ export default function AdminMusic() {
   const [loading, setLoading] = useState(true);
   const [autoplay, setAutoplay] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [picker, setPicker] = useState<"audio" | "cover" | null>(null);
   const [draft, setDraft] = useState({ audio: null as PickerMediaItem | UploadedMedia | null, cover: null as PickerMediaItem | UploadedMedia | null, title: "", artist: "", lrc: "" });
@@ -46,10 +47,23 @@ export default function AdminMusic() {
   const upload = async (file: File, kind: "audio" | "image") => {
     const token = getToken();
     if (!token) throw new Error("登录状态已失效");
-    return uploadDirect(file, token, kind);
+    setUploading(true);
+    setMessage("正在上传音频到云端，请勿关闭页面...");
+    if (kind === "audio") setDraft((current) => ({ ...current, audio: null }));
+    try {
+      const media = await uploadDirect(file, token, kind);
+      setMessage("云端上传成功，现在可以添加到歌单。");
+      return media;
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "上传音频失败";
+      setMessage(detail);
+      window.alert(detail);
+      throw error;
+    } finally { setUploading(false); }
   };
   const addTrack = async () => {
-    if (!draft.audio) { setMessage("请先上传或选择 云端音频文件"); return; }
+    if (uploading) { setMessage("音频仍在上传，请等待上传成功。"); return; }
+    if (!draft.audio) { setMessage("请先等待音频上传成功，或从云端媒体库选择音频。"); return; }
     setSaving(true); setMessage("");
     try {
       const response = await apiFetch("/music/admin/tracks", { method: "POST", body: JSON.stringify({ audioMediaId: draft.audio.id, coverMediaId: draft.cover?.id || null, title: draft.title, artist: draft.artist, lrc: draft.lrc }) });
