@@ -33,6 +33,10 @@ function serializeTrack(track: MusicTrack & { audio?: Media; cover?: Media }) {
   };
 }
 
+function serializeAdminTrack(track: MusicTrack & { audio?: Media; cover?: Media }) {
+  return { ...serializeTrack(track), sourceUrl: track.sourceUrl || "" };
+}
+
 async function loadDefaultPlaylist() {
   const playlist = await getDefaultPlaylist();
   const tracks = await MusicTrack.findAll({
@@ -66,6 +70,18 @@ function readText(value: unknown, field: string, maxLength: number, required = f
   return text;
 }
 
+function readSourceUrl(value: unknown, required = false) {
+  const text = readText(value, "歌曲来源网址", 1000, required);
+  if (!text) return text;
+  try {
+    const url = new URL(text);
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error();
+    return url.toString();
+  } catch {
+    throw new Error("歌曲来源网址必须是有效的 HTTP 或 HTTPS 地址");
+  }
+}
+
 // GET /api/music — public cloud-only background playlist.
 router.get("/", async (_req: Request, res: Response) => {
   try {
@@ -97,7 +113,7 @@ router.get("/admin", authenticate, requireAdmin, async (_req: AuthRequest, res: 
       loadDefaultPlaylist(),
       SiteSetting.findOrCreate({ where: { id: 1 }, defaults: { id: 1, ...siteSettingTextDefaults } }).then(([item]) => item),
     ]);
-    res.json({ id: playlist.id, name: playlist.name, tracks: tracks.map(serializeTrack), musicAutoplay: setting.musicAutoplay });
+    res.json({ id: playlist.id, name: playlist.name, tracks: tracks.map(serializeAdminTrack), musicAutoplay: setting.musicAutoplay });
   } catch (err) {
     console.error("[music] get admin playlist error:", err);
     res.status(500).json({ message: "获取歌单失败" });
@@ -137,6 +153,7 @@ router.post("/admin/tracks", authenticate, requireAdmin, async (req: AuthRequest
     }
     const title = readText(req.body?.title, "歌曲名称", 255, false) || audio.filename.replace(/\.[^.]+$/, "") || "未命名歌曲";
     const artist = readText(req.body?.artist, "歌手", 255, false) || "";
+    const sourceUrl = readSourceUrl(req.body?.sourceUrl, true)!;
     const lrc = readText(req.body?.lrc, "歌词", 100_000, false) || "";
     const playlist = await getDefaultPlaylist();
     const maxOrderValue = await MusicTrack.max("sortOrder", { where: { playlistId: playlist.id } });
@@ -147,13 +164,14 @@ router.post("/admin/tracks", authenticate, requireAdmin, async (req: AuthRequest
       coverMediaId: cover?.id || null,
       title,
       artist,
+      sourceUrl,
       lrc,
       sortOrder: Number.isFinite(maxOrder) ? maxOrder + 1 : 0,
     });
     const full = await MusicTrack.findByPk(track.id, {
       include: [{ model: Media, as: "audio" }, { model: Media, as: "cover", required: false }],
     });
-    res.status(201).json(serializeTrack(full as MusicTrack & { audio?: Media; cover?: Media }));
+    res.status(201).json(serializeAdminTrack(full as MusicTrack & { audio?: Media; cover?: Media }));
   } catch (err: any) {
     res.status(400).json({ message: err.message || "添加歌曲失败" });
   }
@@ -168,7 +186,7 @@ router.patch("/admin/tracks/:id", authenticate, requireAdmin, async (req: AuthRe
       res.status(404).json({ message: "歌曲不存在" });
       return;
     }
-    const updates: Partial<Pick<MusicTrack, "audioMediaId" | "coverMediaId" | "title" | "artist" | "lrc">> = {};
+    const updates: Partial<Pick<MusicTrack, "audioMediaId" | "coverMediaId" | "title" | "artist" | "sourceUrl" | "lrc">> = {};
     if (req.body?.audioMediaId !== undefined) {
       const audio = await getOwnedMedia(req.body.audioMediaId, req.user!.id, "audio");
       if (!audio) {
@@ -190,15 +208,17 @@ router.patch("/admin/tracks/:id", authenticate, requireAdmin, async (req: AuthRe
     }
     const title = readText(req.body?.title, "歌曲名称", 255);
     const artist = readText(req.body?.artist, "歌手", 255);
+    const sourceUrl = readSourceUrl(req.body?.sourceUrl);
     const lrc = readText(req.body?.lrc, "歌词", 100_000);
     if (title !== undefined) updates.title = title || "未命名歌曲";
     if (artist !== undefined) updates.artist = artist;
+    if (sourceUrl !== undefined) updates.sourceUrl = sourceUrl;
     if (lrc !== undefined) updates.lrc = lrc;
     await track.update(updates);
     const full = await MusicTrack.findByPk(track.id, {
       include: [{ model: Media, as: "audio" }, { model: Media, as: "cover", required: false }],
     });
-    res.json(serializeTrack(full as MusicTrack & { audio?: Media; cover?: Media }));
+    res.json(serializeAdminTrack(full as MusicTrack & { audio?: Media; cover?: Media }));
   } catch (err: any) {
     res.status(400).json({ message: err.message || "更新歌曲失败" });
   }

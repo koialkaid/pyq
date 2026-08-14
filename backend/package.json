@@ -15,6 +15,7 @@
     "db:migrate-footer-html": "ts-node src/scripts/migrate-footer-html.ts",
     "db:migrate-decoration-image": "ts-node src/scripts/migrate-decoration-image.ts",
     "db:migrate-content-pages": "ts-node src/scripts/migrate-content-pages.ts",
+    "db:migrate-music-source-url": "ts-node src/scripts/migrate-music-source-url.ts",
     "blog:migrate-legacy": "ts-node src/scripts/migrate-legacy-blog.ts",
     "music:migrate-r2": "ts-node src/scripts/migrate-r2-music.ts",
     "storage:smoke": "ts-node src/scripts/smoke-storage.ts"

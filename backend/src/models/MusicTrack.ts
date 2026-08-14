@@ -8,6 +8,7 @@ interface MusicTrackAttributes {
   coverMediaId: string | null;
   title: string;
   artist: string;
+  sourceUrl: string;
   lrc: string;
   sortOrder: number;
   createdAt: Date;
@@ -16,7 +17,7 @@ interface MusicTrackAttributes {
 
 type MusicTrackCreationAttributes = Optional<
   MusicTrackAttributes,
-  "id" | "coverMediaId" | "artist" | "lrc" | "sortOrder" | "createdAt" | "updatedAt"
+  "id" | "coverMediaId" | "artist" | "sourceUrl" | "lrc" | "sortOrder" | "createdAt" | "updatedAt"
 >;
 
 class MusicTrack
@@ -29,6 +30,7 @@ class MusicTrack
   declare coverMediaId: string | null;
   declare title: string;
   declare artist: string;
+  declare sourceUrl: string;
   declare lrc: string;
   declare sortOrder: number;
   declare readonly createdAt: Date;
@@ -66,6 +68,12 @@ MusicTrack.init(
       type: DataTypes.STRING(255),
       allowNull: false,
       defaultValue: "",
+    },
+    sourceUrl: {
+      type: DataTypes.STRING(1000),
+      allowNull: false,
+      defaultValue: "",
+      field: "source_url",
     },
     lrc: {
       type: DataTypes.TEXT,
