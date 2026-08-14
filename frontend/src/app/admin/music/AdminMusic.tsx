@@ -79,10 +79,31 @@ export default function AdminMusic() {
     finally { setSaving(false); }
   };
   const removeTrack = async (id: string) => {
-    if (!confirm("仅从歌单移除此歌曲，不会删除 云端文件。继续吗？")) return;
-    const response = await apiFetch(`/music/admin/tracks/${id}`, { method: "DELETE" });
-    if (!response.ok) { const data = await response.json().catch(() => null); setMessage(data?.message || "移除歌曲失败"); return; }
-    setTracks((current) => current.filter((track) => track.id !== id));
+    const track = tracks.find((item) => item.id === id);
+    if (!track) return;
+    if (!confirm(`将从歌单和云端媒体库永久删除「${track.name}」的音频文件，此操作不可恢复。继续吗？`)) return;
+    setSaving(true);
+    try {
+      const trackResponse = await apiFetch(`/music/admin/tracks/${id}`, { method: "DELETE" });
+      if (!trackResponse.ok) {
+        const data = await trackResponse.json().catch(() => null);
+        throw new Error(data?.message || "移除歌曲失败");
+      }
+      setTracks((current) => current.filter((item) => item.id !== id));
+
+      const mediaResponse = await apiFetch(`/media/${track.audioMediaId}`, { method: "DELETE" });
+      if (!mediaResponse.ok) {
+        const data = await mediaResponse.json().catch(() => null);
+        throw new Error(`歌曲已从歌单移除，但云端文件删除失败：${data?.message || "请到媒体库重试"}`);
+      }
+      setMessage(`「${track.name}」已从歌单和云端媒体库删除。`);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "删除歌曲失败";
+      setMessage(detail);
+      window.alert(detail);
+    } finally {
+      setSaving(false);
+    }
   };
   const move = async (index: number, direction: -1 | 1) => {
     const next = [...tracks]; const target = index + direction;
