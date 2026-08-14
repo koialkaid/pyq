@@ -4,17 +4,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
-  User,
   UserRound,
   Contact,
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
   BookUser,
   X,
-  Volume2,
-  VolumeX,
   Camera,
   Lock,
   Eye,
@@ -40,8 +33,6 @@ import {
   MoreVertical,
 } from "lucide-react";
 import { cravatarUrl } from "@/lib/avatar";
-import { getGlobalAudio } from "@/lib/global-audio";
-import { useMusicPlayer } from "@/lib/music-player-store";
 import { Post, type PostLocation, type PostImage, type PostVideo, type PostDouban } from "@/lib/mock-data";
 import { isLivePhoto, getImageSrc } from "@/lib/post-image";
 import { uploadAudio, uploadDirect, uploadImage, uploadVideo, toAbsoluteUrl, toHttps } from "@/lib/upload";
@@ -52,19 +43,12 @@ import RichTextEditor from "./RichTextEditor";
 import LazyImage from "./LazyImage";
 import LocationPicker from "./LocationPicker";
 import LyricEditor from "./LyricEditor";
-import LyricPanel from "./LyricPanel";
 import MediaPicker, { type PickerMediaItem } from "./MediaPicker";
 import DoubanPicker from "./DoubanPicker";
 import DoubanEmbedCard from "./article/DoubanEmbedCard";
 import DoubanSidebar from "./DoubanSidebar";
 
 const API_URL = PUBLIC_API_URL;
-const AUDIO_BASE = API_URL.replace("/api", "");
-
-function toAbsolute(url: string): string {
-  if (!url || typeof url !== "string") return "";
-  return url.startsWith("http") ? url : `${AUDIO_BASE}${url}`;
-}
 
 interface TopBarProps {
   coverHeight?: number;
@@ -77,6 +61,16 @@ interface FriendLink {
   desc: string;
   email: string;
   avatar: string;
+}
+
+interface SearchResult {
+  id: string;
+  shortId?: string;
+  type: "article" | "moment" | string;
+  title?: string;
+  excerpt?: string;
+  content?: string;
+  cover?: string;
 }
 
 /** 解析友链头像：avatar 优先（邮箱→Cravatar，链接/上传→原值），为空回退 email */
@@ -105,7 +99,7 @@ export interface LoggedInUser {
 
 export default function TopBar({ coverHeight = 300 }: TopBarProps) {
   const router = useRouter();
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [, setScrollProgress] = useState(0);
   const [bgAlpha, setBgAlpha] = useState(0);
   const [showFriends, setShowFriends] = useState(false);
   const [friendsTab, setFriendsTab] = useState<"friends" | "douban">("friends");
@@ -125,28 +119,6 @@ export default function TopBar({ coverHeight = 300 }: TopBarProps) {
   const [showLogin, setShowLogin] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
 
-  // Music player — 从全局 store 读取状态（由 GlobalMusicManager 管理）
-  const isPlaying = useMusicPlayer((s) => s.isPlaying);
-  const isLoading = useMusicPlayer((s) => s.isLoading);
-  const switching = useMusicPlayer((s) => s.switching);
-  const musicUrl = useMusicPlayer((s) => s.musicUrl);
-  const musicName = useMusicPlayer((s) => s.musicName);
-  const lyric = useMusicPlayer((s) => s.lyric);
-  const currentLyric = useMusicPlayer((s) => s.currentLyric);
-  const currentLyricIndex = useMusicPlayer((s) => s.currentLyricIndex);
-  const showLyricPanel = useMusicPlayer((s) => s.showLyricPanel);
-  const muted = useMusicPlayer((s) => s.muted);
-  const audioError = useMusicPlayer((s) => s.audioError);
-  const audioErrorMessage = useMusicPlayer((s) => s.audioErrorMessage);
-  const musicLoaded = useMusicPlayer((s) => s.musicLoaded);
-  const activePostMusic = useMusicPlayer((s) => s.activePostMusic);
-  const playlist = useMusicPlayer((s) => s.playlist);
-  const currentIndex = useMusicPlayer((s) => s.currentIndex);
-  const clearActivePost = useMusicPlayer((s) => s.clear);
-  const setShowLyricPanel = useMusicPlayer((s) => s.setShowLyricPanel);
-  const setMuted = useMusicPlayer((s) => s.setMuted);
-  const prepareTrack = useMusicPlayer((s) => s.prepareTrack);
-
   // Logged-in state
   const [loggedIn, setLoggedIn] = useState<LoggedInUser | null>(null);
 
@@ -163,9 +135,10 @@ export default function TopBar({ coverHeight = 300 }: TopBarProps) {
   const [doubanLoaded, setDoubanLoaded] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch friend links + douban existence check（音乐数据由 GlobalMusicManager 全局管理）
@@ -198,10 +171,7 @@ export default function TopBar({ coverHeight = 300 }: TopBarProps) {
       clearTimeout(searchDebounceRef.current);
     }
     const q = searchQuery.trim();
-    if (!q) {
-      setSearchResults([]);
-      return;
-    }
+    if (!q) return;
     searchDebounceRef.current = setTimeout(async () => {
       setSearching(true);
       try {
@@ -221,6 +191,27 @@ export default function TopBar({ coverHeight = 300 }: TopBarProps) {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     };
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (!showSearch) return;
+    const closeSearch = () => {
+      setShowSearch(false);
+      setSearchQuery("");
+      setSearchResults([]);
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) closeSearch();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeSearch();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showSearch]);
   const loadMoreFriends = useCallback(async () => {
     if (friendsLoadingRef.current || !friendsHasMore) return;
     friendsLoadingRef.current = true;
@@ -337,57 +328,6 @@ export default function TopBar({ coverHeight = 300 }: TopBarProps) {
     }
   }, []);
 
-  const togglePlay = async () => {
-    const audio = getGlobalAudio();
-    if (!audio || (!musicUrl && !activePostMusic && playlist.length === 0)) return;
-    if (audio.paused) {
-      let targetUrl = activePostMusic?.url || musicUrl;
-      if (!activePostMusic && !targetUrl) {
-        const prepared = await prepareTrack(currentIndex);
-        if (!prepared) return;
-        targetUrl = prepared.url;
-      }
-      // 强守卫：src 缺失或不匹配目标 URL 时重新加载，避免播放过期歌曲
-      if (!audio.getAttribute("src") || !audio.src.includes(targetUrl)) {
-        audio.src = targetUrl;
-      }
-      audio.play().catch(() => useMusicPlayer.getState().setAudioError(true, "播放地址已失效或被音源拒绝，请重试或切换曲目。"));
-    } else {
-      audio.pause();
-    }
-  };
-
-  const toggleMute = () => {
-    const audio = getGlobalAudio();
-    if (audio) {
-      audio.muted = !muted;
-      setMuted(!muted);
-    }
-  };
-
-  const playTrack = async (index: number) => {
-    const audio = getGlobalAudio();
-    const st = useMusicPlayer.getState();
-    if (!st.playlist[index] || !audio) return;
-    const prepared = await prepareTrack(index);
-    if (!prepared) return;
-    if (st.activePostMusic) clearActivePost();
-    audio.src = prepared.url;
-    audio.play().catch(() => useMusicPlayer.getState().setAudioError(true, "播放地址已失效或被音源拒绝，请重试或切换曲目。"));
-  };
-
-  const playNext = () => {
-    if (playlist.length === 0) return;
-    const next = (currentIndex + 1) % playlist.length;
-    playTrack(next);
-  };
-
-  const playPrev = () => {
-    if (playlist.length === 0) return;
-    const prev = (currentIndex - 1 + playlist.length) % playlist.length;
-    playTrack(prev);
-  };
-
   const handleLogout = () => {
     localStorage.removeItem("admin_token");
     localStorage.removeItem("admin_nickname");
@@ -430,152 +370,58 @@ export default function TopBar({ coverHeight = 300 }: TopBarProps) {
             "--topbar-blur": blur,
           } as React.CSSProperties}
         >
-          {/* Left: music player + lyric (mobile: full width, desktop: same) */}
-          {/* 后端未配置歌单时隐藏整个音乐区域（activePostMusic 仍可接管播放） */}
           <div className="flex-1 min-w-0" />
-          {(!musicLoaded || musicUrl || playlist.length > 0 || activePostMusic) && (
-          <div className="flex min-w-0 items-center gap-1.5">
-            {/* Music player + lyric */}
-            {!musicLoaded || switching ? (
-              // 骨架占位：脉冲动画，避免"加载中"文字闪烁
-              <div
-                className={`flex items-center gap-1.5 rounded-full pl-1 pr-2 ${
-                  frosted
-                    ? "bg-black/5 text-gray-700 dark:bg-white/10 dark:text-gray-200"
-                    : "bg-white/15 text-white backdrop-blur-sm"
-                }`}
-              >
-                <div className="h-7 w-7 shrink-0 animate-pulse rounded-full bg-current/25" />
-                <div className="h-2.5 w-14 animate-pulse rounded-full bg-current/25" />
-              </div>
-            ) : (
-              <div
-                className={`flex items-center gap-1.5 rounded-full pl-1 pr-2 transition-colors ${
-                  !musicUrl && !activePostMusic
-                    ? "opacity-50"
-                    : frosted
-                      ? "bg-black/5 text-gray-700 dark:bg-white/10 dark:text-gray-200"
-                      : "bg-white/15 text-white backdrop-blur-sm"
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={togglePlay}
-                  disabled={!musicUrl && !activePostMusic && playlist.length === 0}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/10 disabled:cursor-not-allowed"
-                  aria-label={isPlaying ? "暂停" : "播放"}
-                >
-                  {isPlaying ? (
-                    <Pause className="h-3.5 w-3.5" fill="currentColor" />
-                  ) : (
-                    <Play className="h-3.5 w-3.5" fill="currentColor" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (lyric && lyric.length > 0) setShowLyricPanel(true);
-                  }}
-                  disabled={!lyric || lyric.length === 0}
-                  className={`flex min-w-0 max-w-[180px] items-center truncate text-[11px] transition-opacity hover:opacity-80 disabled:cursor-default md:max-w-[260px] ${currentLyric ? "font-medium" : ""}`}
-                  title={audioError ? audioErrorMessage || "播放地址不可用" : lyric && lyric.length > 0 ? "点击查看歌词" : ""}
-                >
-                  <span className="truncate">
-                    {!musicUrl && !activePostMusic && playlist.length === 0
-                      ? "未设置"
-                      : audioError
-                        ? "播放不可用"
-                        : currentLyric
-                          ? currentLyric
-                          : activePostMusic?.name || musicName || "音乐"}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleMute}
-                  disabled={(!musicUrl && !activePostMusic) || audioError}
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/10 disabled:opacity-40"
-                  aria-label={muted ? "取消静音" : "静音"}
-                >
-                  {muted ? (
-                    <VolumeX className="h-3 w-3" />
-                  ) : (
-                    <Volume2 className="h-3 w-3" />
-                  )}
-                </button>
-                {/* 歌单模式才显示上一首/下一首；动态音乐接管时隐藏 */}
-                {!activePostMusic && playlist.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={playPrev}
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/10"
-                      aria-label="上一首"
-                    >
-                      <SkipBack className="h-3 w-3" fill="currentColor" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={playNext}
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/10"
-                      aria-label="下一首"
-                    >
-                      <SkipForward className="h-3 w-3" fill="currentColor" />
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          )}
 
           {/* Right: search + friends + publish/login */}
           <div className="relative flex shrink-0 items-center gap-1.5">
-            {/* 搜索按钮 */}
-            <button
-              type="button"
-              onClick={() => { setShowSearch((v) => { const next = !v; if (!next) { setSearchQuery(""); setSearchResults([]); } return next; }); }}
-              className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${showSearch ? "bg-wechat-link/15 text-wechat-link dark:bg-white/15" : iconClass}`}
-              aria-label="搜索"
+            <div
+              ref={searchContainerRef}
+              className={`relative h-8 shrink-0 transition-[width] duration-200 ease-out ${showSearch ? "w-[220px] sm:w-[280px] md:w-[320px]" : "w-8"}`}
             >
-              <Search className="h-[18px] w-[18px]" />
-            </button>
-
-            {/* 搜索面板 */}
-            {showSearch && (
-              <div
-                className="absolute right-0 top-full z-50 mt-2 w-[280px] rounded-2xl border border-wechat-border bg-wechat-white shadow-[0_8px_32px_-12px_rgba(0,0,0,0.18)] dark:border-white/10 dark:bg-[#232328] dark:shadow-[0_8px_32px_-12px_rgba(0,0,0,0.55)] md:w-[320px]"
-              >
-                <div className="flex items-center gap-2 border-b border-wechat-border px-3 py-2 dark:border-white/10">
-                  <Search className="h-4 w-4 shrink-0 text-wechat-time" />
+              <div className={`absolute inset-0 overflow-hidden rounded-full transition-[border-color,background-color] duration-200 ${showSearch ? frosted ? "border border-wechat-border bg-black/5 dark:border-white/15 dark:bg-white/10" : "border border-white/60 bg-white/15 backdrop-blur-sm" : "border border-transparent"}`}>
+                {showSearch && (
                   <input
                     ref={searchInputRef}
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(event) => {
+                      setSearchQuery(event.target.value);
+                      if (!event.target.value.trim()) setSearchResults([]);
+                    }}
                     placeholder="搜索动态 / 文章…"
-                    className="flex-1 bg-transparent text-sm text-wechat-text outline-none placeholder:text-wechat-time"
+                    className={`h-full w-full bg-transparent pl-3 pr-10 text-sm outline-none ${frosted ? "text-wechat-text placeholder:text-wechat-time" : "text-white placeholder:text-white/75"}`}
                     autoFocus
                   />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => { setSearchQuery(""); setSearchResults([]); }}
-                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-wechat-time hover:text-wechat-text"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-                {/* Results */}
-                <div className="max-h-[340px] overflow-y-auto">
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSearch((visible) => {
+                      if (visible) {
+                        setSearchQuery("");
+                        setSearchResults([]);
+                      }
+                      return !visible;
+                    });
+                  }}
+                  className={`absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full transition-colors ${iconClass}`}
+                  aria-label={showSearch ? "收起搜索" : "搜索"}
+                  aria-expanded={showSearch}
+                >
+                  <Search className="h-[18px] w-[18px]" />
+                </button>
+              </div>
+
+              {showSearch && (searchQuery.trim() || searching) && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-full min-w-[220px] overflow-hidden rounded-xl border border-wechat-border bg-wechat-white shadow-[0_8px_32px_-12px_rgba(0,0,0,0.18)] dark:border-white/10 dark:bg-[#232328] dark:shadow-[0_8px_32px_-12px_rgba(0,0,0,0.55)]">
+                  <div className="max-h-[340px] overflow-y-auto">
                   {searching && searchResults.length === 0 && (
                     <div className="py-8 text-center text-xs text-wechat-time">搜索中…</div>
                   )}
                   {!searching && searchQuery.trim() && searchResults.length === 0 && (
                     <div className="py-8 text-center text-xs text-wechat-time">无结果</div>
                   )}
-                  {searchResults.map((item: any) => (
+                  {searchResults.map((item) => (
                     <button
                       key={item.id}
                       type="button"
@@ -616,9 +462,10 @@ export default function TopBar({ coverHeight = 300 }: TopBarProps) {
                       </div>
                     </button>
                   ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* 友链按钮 */}
             {((!friendsLoaded || !doubanLoaded) || friendLinks.length > 0 || hasDouban) && (
@@ -852,15 +699,6 @@ export default function TopBar({ coverHeight = 300 }: TopBarProps) {
           </div>
         </div>,
         document.body
-      )}
-
-      {/* 歌词浮层：点击顶栏音乐区展开 */}
-      {showLyricPanel && lyric && lyric.length > 0 && (
-        <LyricPanel
-          lines={lyric}
-          currentIndex={currentLyricIndex}
-          onClose={() => setShowLyricPanel(false)}
-        />
       )}
     </>
   );

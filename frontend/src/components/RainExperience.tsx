@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { usePathname } from "next/navigation";
 import { Droplets, RotateCcw, X } from "lucide-react";
 import { gsap } from "gsap";
+import FloatingMusicControl from "./FloatingMusicControl";
 
 const OPACITY_KEY = "koi_blog_card_opacity";
 const RAIN_KEY = "koi_blog_rain_enabled";
@@ -324,7 +325,9 @@ export default function RainExperience({ children }: { children: ReactNode }) {
   const [cardOpacity, setCardOpacity] = useState(45);
   const [rainEnabled, setRainEnabled] = useState(true);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [musicPanelOpen, setMusicPanelOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const liftControlsOnMobile = /^\/articles\/[^/]+/.test(pathname);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -362,7 +365,14 @@ export default function RainExperience({ children }: { children: ReactNode }) {
       <RainCanvas enabled={rainEnabled} />
       <div className="rain-content-layer">{children}</div>
 
-      <div className="rain-controls">
+      <div className={`rain-controls ${liftControlsOnMobile ? "rain-controls-lift-mobile" : ""}`}>
+        <FloatingMusicControl
+          panelOpen={musicPanelOpen}
+          onTogglePanel={() => {
+            setPanelOpen(false);
+            setMusicPanelOpen((open) => !open);
+          }}
+        />
         {panelOpen && (
           <div ref={panelRef} className="rain-controls-panel" role="dialog" aria-label="雨景显示设置">
             <div className="flex items-center justify-between gap-3">
@@ -384,7 +394,7 @@ export default function RainExperience({ children }: { children: ReactNode }) {
             </button>
           </div>
         )}
-        <button type="button" onClick={() => setPanelOpen((open) => !open)} className="rain-controls-trigger" aria-expanded={panelOpen} aria-label="调整雨景和卡片透明度" title="显示设置">
+        <button type="button" onClick={() => { setMusicPanelOpen(false); setPanelOpen((open) => !open); }} className="rain-controls-trigger" aria-expanded={panelOpen} aria-label="调整雨景和卡片透明度" title="显示设置">
           <Droplets className="h-5 w-5" />
         </button>
       </div>
