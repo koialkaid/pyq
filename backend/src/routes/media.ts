@@ -316,11 +316,13 @@ router.delete(
       return;
     }
 
-    // 删除 R2 对象失败不阻塞记录删除
+    // Keep the media record when cloud deletion fails so the operation can be retried.
     try {
       await deleteStoredFile(media.url, media.storageType);
-    } catch {
-      console.log(`[media] 远端文件删除失败: ${media.url}`);
+    } catch (error) {
+      console.error(`[media] cloud deletion failed for media ${media.id}:`, error);
+      res.status(502).json({ message: "云端文件删除失败，媒体记录已保留，请稍后重试" });
+      return;
     }
 
     await media.destroy();

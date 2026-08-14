@@ -139,7 +139,9 @@ export function getStoragePublicUrl(key: string): string {
 
 export async function deleteStoredFile(url: string, storageType: StorageType): Promise<void> {
   const key = storageType === "supabase" ? extractSupabaseKey(url) : extractR2Key(url);
-  if (!key) return;
-  if (storageType === "supabase") await deleteFromSupabase(key);
-  else await deleteFromR2(key);
+  if (!key) throw new Error("无法从媒体地址识别云端对象路径");
+  const deleted = storageType === "supabase"
+    ? await deleteFromSupabase(key)
+    : await deleteFromR2(key);
+  if (!deleted) throw new Error(`${storageType === "supabase" ? "Supabase" : "R2"} 云端对象删除失败`);
 }

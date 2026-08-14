@@ -177,9 +177,12 @@ export default function AdminMedia() {
         } else {
           fetchMedia();
         }
+      } else {
+        const data = await res.json().catch(() => null);
+        window.alert(data?.message || "删除失败，请稍后重试");
       }
-    } catch {
-      // 忽略
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "删除失败，请检查网络后重试");
     } finally {
       setDeleting(false);
     }
